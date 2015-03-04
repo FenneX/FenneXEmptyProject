@@ -26,16 +26,16 @@
 #include "AnalyticsWrapper.h"
 
 
-void EventResponder::planSceneSwitch(CCObject* obj)
+void EventResponder::planSceneSwitch(EventCustom* event)
 {
-    CCDictionary* infos = (CCDictionary*)obj;
+    CCDictionary* infos = (CCDictionary*)event->getUserData();
     SceneName scene = (SceneName)TOINT(infos->objectForKey("Scene"));
     AnalyticsWrapper::logPageView(formatSceneToString(scene));
 }
 
 static time_t lastClickTime = 0;
 
-void EventResponder::keyBackClicked(CCObject* obj)
+void EventResponder::keyBackClicked(EventCustom* event)
 {
     time_t currentTime;
     time(&currentTime);
@@ -57,18 +57,18 @@ void EventResponder::keyBackClicked(CCObject* obj)
     }
     else
     {
-        this->quitApp(obj);
+        this->quitApp(event);
     }
 }
 
-void EventResponder::back(CCObject* obj)
+void EventResponder::back(EventCustom* event)
 {
-    CCDictionary* infos = obj != NULL && isKindOfClass(obj, CCDictionary) ? CCDictionary::createWithDictionary((CCDictionary*)obj) : Dcreate();
+    CCDictionary* infos = event != NULL && event->getUserData() != NULL && isKindOfClass((Ref*)event->getUserData(), CCDictionary) ? CCDictionary::createWithDictionary((CCDictionary*)event->getUserData()) : Dcreate();
     infos->setObject(Icreate(getPreviousSceneName(currentScene->getSceneName())), "Scene");
-    CCNotificationCenter::sharedNotificationCenter()->postNotification("PlanSceneSwitch", infos);
+    Director::getInstance()->getEventDispatcher()->dispatchCustomEvent("PlanSceneSwitch", infos);
 }
 
-void EventResponder::quitApp(CCObject* obj)
+void EventResponder::quitApp(EventCustom* event)
 {
     CCLOG("Quitting application");
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)

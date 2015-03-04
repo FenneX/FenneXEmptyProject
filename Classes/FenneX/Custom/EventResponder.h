@@ -38,10 +38,10 @@ NS_FENNEX_END
 class EventResponder : public Ref
 {
 public:
-    void planSceneSwitch(CCObject* obj); //will log a pagview when there is a sceneswitch
-    void keyBackClicked(CCObject* obj); //for Android only, will perform a back, or quit the app if there is no available back or if it's a double tap
-    void back(CCObject* obj); //Will perform a back action. That's where you want to intercept back for specific cases  (for example, an unvalid form)
-    void quitApp(CCObject* obj); //for Android only, will quit the app after cleaning up analytics
+    void planSceneSwitch(EventCustom* event); //will log a pagview when there is a sceneswitch
+    void keyBackClicked(EventCustom* event); //for Android only, will perform a back, or quit the app if there is no available back or if it's a double tap
+    void back(EventCustom* event); //Will perform a back action. That's where you want to intercept back for specific cases  (for example, an unvalid form)
+    void quitApp(EventCustom* event); //for Android only, will quit the app after cleaning up analytics
 private:
     GraphicLayer* layer;
     FenneX::Scene* currentScene;

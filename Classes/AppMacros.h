@@ -53,7 +53,7 @@
 #define USE_TRANSLATION 1
 
 //Verbose is used to put on or off certain CCLOG. Put all at 0 for release
-//Warning : for events, you have to manually change it in CCNotificationCenter, since it's part of cocos2d
+//Warning : for events, you have to manually change it in EventDispatcher, since it's part of cocos2d
 
 //Log every FenneX object dealloc. Useful to detect leaks
 #define VERBOSE_DEALLOC 0

@@ -51,7 +51,7 @@ void LayoutHandler::createSceneGraphics(Scene* target)
         {
             //Do your splashscreen logic here for Android. If you don't want a splashscreen on Android, modify AppDelegate to skip it
             //It will stay for 2 seconds, which is more than enough for the initial load
-            performNotificationAfterDelay("PlanSceneSwitch", DcreateP(Icreate(FIRST_SCENE), Screate("Scene"), NULL), 2);
+            DelayedDispatcher::eventAfterDelay("PlanSceneSwitch", DcreateP(Icreate(FIRST_SCENE), Screate("Scene"), NULL), 2);
         }
             break;
             break;
@@ -73,13 +73,12 @@ void LayoutHandler::createSceneGraphics(Scene* target)
 #endif
 }
 
-#define ADD_OBSERVER(func, notifName) (center->addObserver(responder, callfuncO_selector(EventResponder::func), notifName, NULL))
+#define ADD_OBSERVER(func, notifName) (listeners.pushBack(Director::getInstance()->getEventDispatcher()->addCustomEventListener(notifName, std::bind(&EventResponder::func, responder, std::placeholders::_1))))
 void LayoutHandler::catchEvents(Scene* target)
 {
     //Uncomment the following line to have a monkey tap everywhere. It catchs some types of bug very quickly!
     //target->addUpdatable(Monkey::excitedMonkey());
     
-    CCNotificationCenter* center = CCNotificationCenter::sharedNotificationCenter();
     ADD_OBSERVER(keyBackClicked, "KeyBackClicked");
     ADD_OBSERVER(back, "Back");
     ADD_OBSERVER(quitApp, "QuitApp");

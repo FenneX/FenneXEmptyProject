@@ -93,7 +93,7 @@ void AppDelegate::initAppModules()
 	bool firstLaunch = settings == NULL || !isKindOfClass(settings->objectForKey("FirstLaunch"), CCBool) || TOBOOL(settings->objectForKey("FirstLaunch"));
 	if(firstLaunch)
 	{
-		CCString* language = ScreateF("Language: %s", getLocalLanguage());
+		CCString* language = ScreateF("Language: %s", getLocalLanguage().c_str());
 		if(settings == NULL)
 		{
 			settings = Dcreate();
@@ -103,9 +103,9 @@ void AppDelegate::initAppModules()
 		settings->setObject(Screate(getLocalLanguage()), "Language");
 		settings->setObject(Bcreate(false), "FirstLaunch");
 	}
-	else if(strcmp(getLocalLanguage(), TOCSTRING(settings->objectForKey("Language"))) != 0)
+	else if(getLocalLanguage() != TOCSTRING(settings->objectForKey("Language")))
 	{
-		CCString* language = ScreateF("Change to language: %s, previous language: %s", getLocalLanguage(), TOCSTRING(settings->objectForKey("Language")));
+		CCString* language = ScreateF("Change to language: %s, previous language: %s", getLocalLanguage().c_str(), TOCSTRING(settings->objectForKey("Language")));
 		CCLOG("%s", language->getCString());
 		AnalyticsWrapper::logEvent(language->getCString());
 		settings->setObject(Screate(getLocalLanguage()), "Language");
@@ -183,7 +183,7 @@ bool AppDelegate::applicationDidFinishLaunching()
 void AppDelegate::applicationDidEnterBackground()
 {
     CCDirector::sharedDirector()->stopAnimation();
-    CCNotificationCenter::sharedNotificationCenter()->postNotification("AppEnterBackground");
+    Director::getInstance()->getEventDispatcher()->dispatchCustomEvent("AppEnterBackground");
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
     CCLOG("Stopping flurry session on enter background");
     AnalyticsWrapper::endSession();

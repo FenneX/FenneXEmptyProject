@@ -27,14 +27,14 @@ THE SOFTWARE.
 
 #define CC_SYNTHESIZE_STRING(varName, funName)\
 protected: std::string varName;\
-public: virtual const char* get##funName(void) const { return varName.c_str(); }\
-public: virtual void set##funName(const char* var){ \
-if(var == NULL) varName.clear();\
-else if (varName.compare(var))\
+public: virtual const std::string get##funName(void) const { return varName; }\
+public: virtual void set##funName(const std::string var){ \
+if (varName.compare(var))\
 varName = var;}
+
 
 #define CC_SYNTHESIZE_STRING_READONLY(varName, funName)\
 protected: std::string varName;\
-public: virtual const char* get##funName(void) const { return varName.c_str(); }
+public: virtual const std::string get##funName(void) const { return varName; }
 
 #endif

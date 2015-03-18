@@ -58,7 +58,6 @@ VideoPlayer::~VideoPlayer()
 
 void VideoPlayer::setUseVLC(bool useVLC)
 {
-    CCAssert(useVLC == true, "VLC is not integrated yet");
 	JniMethodInfo minfo;
 	CCAssert(JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"setUseVLC", "(Z)V"), "Function doesn't exist");
 	minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, (jboolean)useVLC);
@@ -164,7 +163,7 @@ std::string VideoPlayer::getThumbnail(const std::string& path)
 	minfo.env->DeleteLocalRef(stringArg);
     minfo.env->DeleteLocalRef(minfo.classID);
 
-	if(result == NULL) return NULL;
+	if(result == NULL) return "";
 
 	const char *nativeResult = minfo.env->GetStringUTFChars(result, 0);
 	std::string thumbnailPath = std::string(nativeResult);
@@ -203,6 +202,15 @@ extern "C"
 		if(pathC != NULL)
 		{
 			notifyVideoEnded(pathC);
+		}
+		env->ReleaseStringUTFChars(path, pathC);
+	}
+	void Java_com_fennex_modules_VideoPlayer_notifyVideoError(JNIEnv* env, jobject thiz, jstring path)
+	{
+		const char* pathC = env->GetStringUTFChars(path, 0);
+		if(pathC != NULL)
+		{
+			notifyVideoError(pathC);
 		}
 		env->ReleaseStringUTFChars(path, pathC);
 	}

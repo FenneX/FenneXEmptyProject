@@ -34,9 +34,12 @@ import java.io.InputStream;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -93,15 +96,37 @@ public class ImagePicker implements ActivityResultResponder
                     }
                     else if(requestCode == PICTURE_GALLERY) {
                         Uri selectedImage = data.getData();
-                        InputStream imageStream = NativeUtility.getMainActivity().getContentResolver().openInputStream(selectedImage);
+                        String[] orientationColumn = {MediaStore.Images.Media.ORIENTATION};
+                        Cursor cur = NativeUtility.getMainActivity().getContentResolver().query(selectedImage, orientationColumn, null, null, null);
+                        int orientation = 0;
+                        if (cur != null && cur.moveToFirst()) {
+                            orientation = cur.getInt(cur.getColumnIndex(orientationColumn[0]));
+                        }
+                        InputStream imageStream;
+                        imageStream = NativeUtility.getMainActivity().getContentResolver().openInputStream(selectedImage);
                         original = BitmapFactory.decodeStream(imageStream);
+                        original = rotateImage(original, orientation);
                     }
                     else { //CAMERA_CAPTURE
                         /* When not using EXTRA_OUTPUT, the Intent will produce a small image, depending on device and app used
                         original = data.getParcelableExtra("data");*/
                         //The EXTRA_OUTPUT parameter of Intent
                         File file = new File(storageDirectory +  "/" + _fileName.substring(0, _fileName.length() - 4) + ".jpg");
+                        ExifInterface exif = new ExifInterface(file.getAbsolutePath());
+                        int exifOrientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+                        int rotation = 0;
+                        if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_90) { rotation = 90; }
+                        else if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_180) {  rotation = 180; }
+                        else if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_270) {  rotation = 270; }
                         original = BitmapFactory.decodeFile(file.getAbsolutePath());
+                        original = rotateImage(original, rotation);
+                        final Bitmap saveToGallery = original.copy(original.getConfig(), true);
+                        new Thread() {
+                            public void run() {
+                                insertPhotoIntoGallery(saveToGallery);
+                                saveToGallery.recycle();
+                            }
+                        }.start();
                         //Clean file
                         file.delete();
                     }
@@ -155,6 +180,17 @@ public class ImagePicker implements ActivityResultResponder
 			Log.d(TAG, "not image picker activity");
 		}
         return false;
+    }
+
+    private Bitmap rotateImage(Bitmap image, int rotationAngle)
+    {
+        if(rotationAngle!=0)
+        {
+            Matrix matrix = new Matrix();
+            matrix.postRotate(rotationAngle);
+            image = Bitmap.createBitmap(image, 0, 0, image.getWidth(), image.getHeight(), matrix, true);
+        }
+        return image;
     }
 
     private static void saveBitmap(Bitmap bitmap, String path) throws IOException {
@@ -256,17 +292,21 @@ public class ImagePicker implements ActivityResultResponder
         }
         return Bitmap.createScaledBitmap(b, (int) (b.getWidth() * factorToUse), (int) (b.getHeight() * factorToUse), true);  
     }
-    
+
     public void insertPhotoIntoGallery(Intent data)
+    {
+        insertPhotoIntoGallery((Bitmap) data.getParcelableExtra("data"));
+    }
+    
+    public void insertPhotoIntoGallery(Bitmap image)
     {
         File fi = new File(storageDirectory, "photo.png");
         fi.setReadable(true, false);
-        Bitmap original = data.getParcelableExtra("data");
 		FileOutputStream stream;
 		try {
 			stream = new FileOutputStream(fi);
 			/* Write bitmap to file using JPEG or PNG and 80% quality hint for JPEG. */
-			original.compress(CompressFormat.PNG, 100, stream);
+			image.compress(CompressFormat.PNG, 100, stream);
 			stream.close();
 		} catch (FileNotFoundException e1) {
 			e1.printStackTrace();

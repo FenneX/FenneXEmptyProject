@@ -4,10 +4,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.util.ArrayList;
-import java.util.StringTokenizer;
 
 import org.videolan.libvlc.EventHandler;
 import org.videolan.libvlc.IVideoPlayer;
@@ -16,8 +12,6 @@ import org.videolan.libvlc.LibVlcException;
 import org.videolan.libvlc.LibVlcUtil;
 import org.videolan.libvlc.Media;
 import org.videolan.libvlc.MediaList;
-
-import org.cocos2dx.lib.Cocos2dxActivity;
 
 import android.annotation.TargetApi;
 import android.content.ContentResolver;
@@ -77,6 +71,7 @@ public class VideoPlayer extends Handler implements IVideoPlayer
 	private static boolean isPrepared = false;
 	private static boolean shouldLoop;
 	private static boolean videoEnded; //Video ended is there because restart is different than play for LibVLC
+	private static float lastPlaybackRate; //Playback rate must be kept between sessions (when restarting video)
 	
 	public static void setUseVLC(boolean use)
 	{
@@ -116,9 +111,11 @@ public class VideoPlayer extends Handler implements IVideoPlayer
 	//Is used by VideoPicker when doing getAllVideos
 	public native static void notifyVideoDurationAvailable(String path, float duration);
 	public native static void notifyVideoEnded(String path);
+    public native static void notifyVideoError(String path);
 	
 	static void initVideoPlayer(String file, float x, float y, float height, float width, boolean front, boolean loop)
 	{
+		lastPlaybackRate = 1.0f;
 		path = file;
 		toFront = front;
 		localX = x;
@@ -214,6 +211,11 @@ public class VideoPlayer extends Handler implements IVideoPlayer
 						public boolean onError(MediaPlayer mp, int what,
 								int extra) {
 							Log.e(TAG, "VideoView error : " + what + ", " + extra);
+                            NativeUtility.getMainActivity().runOnGLThread(new Runnable() {
+                                public void run() {
+                                    notifyVideoError(path);
+                                }
+                            });
 							return false;
 						}
     				});
@@ -268,7 +270,8 @@ public class VideoPlayer extends Handler implements IVideoPlayer
 			try {
 				if(videoEnded)
 				{
-					LibVlcUtil.getLibVlcInstance().playIndex(0);					
+					LibVlcUtil.getLibVlcInstance().playIndex(0);	
+					setPlaybackRate(lastPlaybackRate);
 				}
 				else
 				{
@@ -340,12 +343,17 @@ public class VideoPlayer extends Handler implements IVideoPlayer
 	{
 		if(useVLC)
 		{
+			if(videoEnded)
+			{
+				return lastPlaybackRate;
+			}
 			try {
 				return LibVlcUtil.getLibVlcInstance().getRate();
 			} catch (LibVlcException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			return lastPlaybackRate;
 		}
 		Log.e(TAG, "getPlaybackRate is only implemented for LibVLC");
 		return 1;
@@ -361,6 +369,7 @@ public class VideoPlayer extends Handler implements IVideoPlayer
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			lastPlaybackRate = rate;
 			return;
 		}
 		Log.e(TAG, "setPlaybackRate is only implemented for LibVLC");
@@ -479,7 +488,7 @@ public class VideoPlayer extends Handler implements IVideoPlayer
 	
 	public static String getThumbnail(String path)
 	{
-		File videoFile = getFile(path);
+        File videoFile = getFile(path);
 		if(videoFile == null)
 		{
 			return null;
@@ -513,9 +522,14 @@ public class VideoPlayer extends Handler implements IVideoPlayer
 		        retriever.setDataSource(videoFile.getAbsolutePath());
 		        int timeInSeconds = 1;
 		        thumb = retriever.getFrameAtTime(timeInSeconds * 1000000,
-		                    MediaMetadataRetriever.OPTION_CLOSEST_SYNC); 
-				thumb.compress(CompressFormat.PNG, 80, streamThumbnail);
-				thumb.recycle(); //ensure the image is freed;
+		                    MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+                if(thumb != null) {
+                    thumb.compress(CompressFormat.PNG, 80, streamThumbnail);
+                    thumb.recycle(); //ensure the image is freed;
+                }
+                else {
+                    thumbPath = null;
+                }
 		    } catch (Exception ex) {
 		        Log.i(TAG, "MediaMetadataRetriever got exception:" + ex);
 		        thumbPath = null;
@@ -536,14 +550,15 @@ public class VideoPlayer extends Handler implements IVideoPlayer
 	
 	public static boolean videoExists(String path)
 	{
-		return getFile(path) != null;
+		File videoFile = getFile(path);
+		return videoFile != null && videoFile.exists() && videoFile.canRead();
 	}
 	
 	public static File getFile(String path)
 	{
 		Uri localURI = NativeUtility.getMainActivity().getUriFromFileName(path);
 		File localFile = null;
-		final String[] storageDict = getStorageDirectories();
+		final String[] storageDict = VideoPicker.getStorageDirectories();
 		//First check the most common path, then check all storage directories
 		boolean startWithStorageDict = path.startsWith(Environment.getExternalStorageDirectory().toString());
 		for(int i = 0; i < storageDict.length && !startWithStorageDict; i++)
@@ -649,6 +664,24 @@ public class VideoPlayer extends Handler implements IVideoPlayer
     			}
     		});
     	}
+        //Consider a video that ends with less than 1 second as corrupted
+        else if(event == EventHandler.MediaPlayerEncounteredError
+                || (event == EventHandler.MediaPlayerEndReached && getDuration() < 1))
+        {
+            try {
+                LibVLC vlc = LibVlcUtil.getLibVlcInstance();
+                videoEnded = true;
+                NativeUtility.getMainActivity().runOnGLThread(new Runnable()
+                {
+                    public void run()
+                    {
+                        notifyVideoError(path);
+                    }
+                });
+            } catch (LibVlcException e) {
+                e.printStackTrace();
+            }
+        }
     	else if(event == EventHandler.MediaPlayerEndReached)
     	{
             try {
@@ -722,58 +755,4 @@ public class VideoPlayer extends Handler implements IVideoPlayer
             vlc.detachSurface();
         }
     };
-
-
-    public static String[] getStorageDirectories()
-    {
-        String[] dirs = null;
-        BufferedReader bufReader = null;
-        try {
-            bufReader = new BufferedReader(new FileReader("/proc/mounts"));
-            ArrayList<String> list = new ArrayList<String>();
-            list.add(Environment.getExternalStorageDirectory().getPath());
-            String line;
-            while((line = bufReader.readLine()) != null) {
-                if(line.contains("vfat") || line.contains("exfat") ||
-                        line.contains("/mnt") || line.contains("/Removable")) {
-                    StringTokenizer tokens = new StringTokenizer(line, " ");
-                    String s = tokens.nextToken();
-                    s = tokens.nextToken(); // Take the second token, i.e. mount point
-
-                    if (list.contains(s))
-                        continue;
-
-                    if (line.contains("/dev/block/vold")) {
-                        if (!line.startsWith("tmpfs") &&
-                                !line.startsWith("/dev/mapper") &&
-                                !s.startsWith("/mnt/secure") &&
-                                !s.startsWith("/mnt/shell") &&
-                                !s.startsWith("/mnt/asec") &&
-                                !s.startsWith("/mnt/obb")
-                                ) {
-                            list.add(s);
-                        }
-                    }
-                }
-            }
-
-            dirs = new String[list.size()];
-            for (int i = 0; i < list.size(); i++) {
-                dirs[i] = list.get(i);
-            }
-        }
-        catch (FileNotFoundException e) {}
-        catch (IOException e) {}
-        finally {
-            if (bufReader != null) {
-                try {
-                    bufReader.close();
-                }
-                catch (IOException e) {}
-            }
-        }
-        return dirs;
-    }
 }
-
-

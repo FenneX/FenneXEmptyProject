@@ -32,6 +32,7 @@ import java.io.InputStream;
 
 
 import android.content.ActivityNotFoundException;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -44,6 +45,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.widget.Toast;
 
 public class ImagePicker implements ActivityResultResponder
 {
@@ -60,6 +62,7 @@ public class ImagePicker implements ActivityResultResponder
     private static float _thumbnailScale;
     private static boolean _rescale;
 	private Uri uriOfSavedPhoto;
+    private static boolean isPending = false;
 	
     private static volatile ImagePicker instance = null;
     
@@ -69,6 +72,7 @@ public class ImagePicker implements ActivityResultResponder
     {
         if (instance == null) 
         {
+            isPending = false;
             synchronized (ImagePicker .class)
             {
                 if (instance == null) 
@@ -81,9 +85,20 @@ public class ImagePicker implements ActivityResultResponder
         }
         return instance;
     }
+
+    public void destroy()
+    {
+        if(isPending)
+        {
+            Toast.makeText(NativeUtility.getMainActivity(), TOO_MUCH_APP, Toast.LENGTH_LONG).show();
+            isPending = false;
+        }
+        instance = null;
+    }
 	
 	//Return true if it uses the activity result is handled by the in-app module
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+        isPending = false;
         Log.d(TAG, "onActivityResult(" + requestCode + "," + resultCode + "," + (data != null ? data.getExtras() : "no data"));
         if (requestCode == PICTURE_GALLERY || requestCode == CAMERA_CAPTURE || requestCode == CROP)
 		{
@@ -171,6 +186,7 @@ public class ImagePicker implements ActivityResultResponder
 				cropIntent.putExtra("aspectY", 1);
 				Log.i(TAG, "Will save in " + storageDirectory + "/cropped.png");
 				cropIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(new File(storageDirectory, "cropped.png")));
+                isPending = true;
 				NativeUtility.getMainActivity().startActivityForResult(cropIntent, CROP);
 			}
 			return true;
@@ -228,6 +244,7 @@ public class ImagePicker implements ActivityResultResponder
                     Uri outputFileUri = Uri.fromFile(file);
                     intent.putExtra(MediaStore.EXTRA_OUTPUT, outputFileUri);
                 }
+                isPending = true;
 		        NativeUtility.getMainActivity().startActivityForResult(intent, CAMERA_CAPTURE);
     		}
     		catch(ActivityNotFoundException e)
@@ -242,6 +259,7 @@ public class ImagePicker implements ActivityResultResponder
     		{
     			Intent intent = new Intent(Intent.ACTION_PICK,android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
     			intent.setType("image/*");
+                isPending = true;
     			NativeUtility.getMainActivity().startActivityForResult(intent, PICTURE_GALLERY);
     		}
     		catch(ActivityNotFoundException e)
@@ -314,7 +332,28 @@ public class ImagePicker implements ActivityResultResponder
 			e.printStackTrace();
 		}
         try {
-        	uriOfSavedPhoto = Uri.parse(android.provider.MediaStore.Images.Media.insertImage(NativeUtility.getMainActivity().getContentResolver(), fi.getAbsolutePath(), null, null));
+            ContentResolver cr = NativeUtility.getMainActivity().getContentResolver();
+            String filePath = fi.getAbsolutePath();
+            String uri = "";
+            int i = 0;
+            while(uri.isEmpty() && i<10)
+            {
+                try
+                {
+                    i++;
+                    uri = android.provider.MediaStore.Images.Media.insertImage(cr, filePath, null, null);
+                }
+                catch(NullPointerException e2)
+                {
+                    Log.i(TAG, "create thumbnail failed : insertImage throw nullPointerException, bitmap decode returned null for file " + filePath);
+                    e2.printStackTrace();
+                }
+
+            }
+            if(!uri.isEmpty())
+            {
+                uriOfSavedPhoto = Uri.parse(uri);
+            }
             if (!fi.delete()) {
                 Log.i(TAG, "Failed to delete " + fi);
             }

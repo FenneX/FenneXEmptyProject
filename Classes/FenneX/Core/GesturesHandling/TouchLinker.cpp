@@ -30,7 +30,6 @@ void TouchLinker::recordTouch(Touch* touch)
 {
     if(!touches.contains(touch))
     {
-        Ref* obj;
         bool shouldAdd = true;
         for(Touch* otherTouch : touches)
         {
@@ -132,7 +131,7 @@ Vector<Ref*> TouchLinker::allObjects()
     return objects;
 }
 
-int TouchLinker::count()
+long TouchLinker::count()
 {
     return touches.size();
 }

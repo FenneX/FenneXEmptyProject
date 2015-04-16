@@ -32,6 +32,13 @@ static DelayedDispatcher* temporaryInstance = NULL;
 static SceneName temporaryInstanceScene = None;
 static EventListenerCustom* temporaryListener = NULL;
 
+
+DelayedDispatcher::~DelayedDispatcher()
+{
+    temporaryInstance = NULL;
+    temporaryInstanceScene = None;
+}
+
 void DelayedDispatcher::eventAfterDelay(std::string eventName, Ref* userData, float delay)
 {
     DelayedDispatcher* instance = getInstance();
@@ -49,7 +56,7 @@ void DelayedDispatcher::funcAfterDelay(std::function<void(cocos2d::EventCustom*)
 bool DelayedDispatcher::cancelEvents(std::string eventName)
 {
     DelayedDispatcher* instance = getInstance();
-    int before = instance->events.size();
+    long before = instance->events.size();
     if(before == 0) return false;
     instance->events.erase(std::remove_if(instance->events.begin(), instance->events.end(), [&](const EventTuple& tuple) { return std::get<1>(tuple) == eventName; }), instance->events.end());
     return before != instance->events.size();
@@ -58,7 +65,7 @@ bool DelayedDispatcher::cancelEvents(std::string eventName)
 bool DelayedDispatcher::cancelFuncs(std::string eventName)
 {
     DelayedDispatcher* instance = getInstance();
-    int before = instance->funcs.size();
+    long before = instance->funcs.size();
     if(before == 0) return false;
     instance->funcs.erase(std::remove_if(instance->funcs.begin(), instance->funcs.end(), [&](const FuncTuple& tuple) { return std::get<3>(tuple) == eventName; }), instance->funcs.end());
     return before != instance->funcs.size();
@@ -86,6 +93,9 @@ void DelayedDispatcher::update(float deltaTime)
         if(std::get<0>(tuple) < 0)
         {
             cocos2d::EventCustom* event = EventCustom::create(std::get<3>(tuple), std::get<2>(tuple));
+#if VERBOSE_GENERAL_INFO
+            CCLOG("Launching event %s", std::get<3>(tuple).c_str());
+#endif
             std::get<1>(tuple)(event);
             IFEXIST(std::get<2>(tuple))->release();
         }

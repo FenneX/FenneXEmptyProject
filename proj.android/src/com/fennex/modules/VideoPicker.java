@@ -22,6 +22,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.widget.Toast;
 
 public class VideoPicker implements ActivityResultResponder {
 
@@ -32,6 +33,7 @@ public class VideoPicker implements ActivityResultResponder {
     
     private static String storageDirectory;
     private static boolean stateStorage = false;
+    private static boolean isPending = false;
     
     private VideoPicker() { }
 
@@ -39,6 +41,7 @@ public class VideoPicker implements ActivityResultResponder {
     {
         if (instance == null) 
         {
+            isPending = false;
             synchronized (ImagePicker .class)
             {
                 if (instance == null) 
@@ -49,6 +52,16 @@ public class VideoPicker implements ActivityResultResponder {
             }
         }
         return instance;
+    }
+
+    public void destroy()
+    {
+        if(isPending)
+        {
+            Toast.makeText(NativeUtility.getMainActivity(), TOO_MUCH_APP, Toast.LENGTH_LONG).show();
+            isPending = false;
+        }
+        instance = null;
     }
 
     public native static void notifyVideoPickedWrap(String name);
@@ -64,6 +77,7 @@ public class VideoPicker implements ActivityResultResponder {
 		{
 			Intent intent = new Intent(Intent.ACTION_PICK,android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
 			intent.setType("video/*");
+            isPending = true;
 			NativeUtility.getMainActivity().startActivityForResult(intent, VIDEO_GALLERY);
 		}
 		catch(ActivityNotFoundException e)
@@ -276,6 +290,7 @@ public class VideoPicker implements ActivityResultResponder {
     
 	@Override
 	public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+        isPending = false;
 		Log.d(TAG, "onActivityResult(" + requestCode + "," + resultCode + "," + data.getExtras());
         if (requestCode == VIDEO_GALLERY || requestCode == CAMERA_CAPTURE)
 		{

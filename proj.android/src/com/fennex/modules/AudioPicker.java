@@ -35,6 +35,7 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Environment;
 import android.util.Log;
+import android.widget.Toast;
 
 public class AudioPicker implements ActivityResultResponder{
 private static final String TAG = "AudioPicker";
@@ -43,6 +44,7 @@ private static final int MUSIC_LIBRARY = 30;
 private static String _fileName;
 private static String _identifier;
 private static String storageDirectory;
+private static boolean isPending = false;
 
 private static volatile AudioPicker instance = null;
     
@@ -52,6 +54,7 @@ private static volatile AudioPicker instance = null;
     {
         if (instance == null) 
         {
+            isPending = false;
             synchronized (AudioPicker .class)
             {
                 if (instance == null) 
@@ -63,8 +66,19 @@ private static volatile AudioPicker instance = null;
         }
         return instance;
     }
+
+    public void destroy()
+    {
+        if(isPending)
+        {
+            Toast.makeText(NativeUtility.getMainActivity(), TOO_MUCH_APP, Toast.LENGTH_LONG).show();
+            isPending = false;
+        }
+        instance = null;
+    }
 	
 	public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+        isPending = false;
 		Log.d(TAG, "OnActivityResult: requestCode = " + requestCode + " resultCode = " + resultCode + " data = " + data);
 		if(requestCode == MUSIC_LIBRARY)
 		{
@@ -110,6 +124,7 @@ private static volatile AudioPicker instance = null;
 			//createTemporaryFolder();
 		}
 		 intent.setType("audio/*");
+        isPending = true;
 		 NativeUtility.getMainActivity().startActivityForResult(intent, MUSIC_LIBRARY);
 		return true;
 	}

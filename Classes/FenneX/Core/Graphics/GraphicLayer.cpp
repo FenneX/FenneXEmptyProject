@@ -1149,6 +1149,8 @@ RawObject* GraphicLayer::duplicateObject(RawObject* otherObject)
         obj = new LabelTTF(otherLabel->getLabelValue(), otherLabel->getFullFontFile()->getCString(), otherLabel->getPosition(), otherLabel->getDimensions(), otherLabel->getAlignment());
         ((Label*)obj->getNode())->setColor(((Label*)otherLabel->getNode())->getColor());
         ((LabelTTF*)obj)->setFitType(otherLabel->getFitType());
+        ((LabelTTF*)obj)->setFontSize(((LabelTTF*)otherObject)->getFontSize());
+        ((Label*)obj->getNode())->setSystemFontName(((Label*)otherObject->getNode())->getSystemFontName());
     }
     else if(isKindOfClass(otherObject, Panel))
     {

@@ -111,7 +111,7 @@ public class TTS implements TextToSpeech.OnInitListener
 	{
 		isInit = true;
 		available = status == TextToSpeech.SUCCESS;
-		if(available)
+		if(available && preinitQueue != null && engine != null)
 		{	
 			for(String s : preinitQueue)
 			{	
@@ -119,6 +119,10 @@ public class TTS implements TextToSpeech.OnInitListener
 				{
 					engine.speak(s, TextToSpeech.QUEUE_ADD, settings);
 				}
+                else if(s == preinitQueue.get(0))
+                {
+                    engine.speak(s, TextToSpeech.QUEUE_FLUSH, null);
+                }
 				else
 				{
 					engine.speak(s, TextToSpeech.QUEUE_ADD, null);

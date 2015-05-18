@@ -43,6 +43,15 @@ AppDelegate::~AppDelegate()
 {
 }
 
+void AppDelegate::initGLContextAttrs()
+{
+    //set OpenGL context attributions,now can only set six attributions:
+    //red,green,blue,alpha,depth,stencil
+    GLContextAttrs glContextAttrs = {8, 8, 8, 8, 24, 8};
+    
+    GLView::setGLContextAttrs(glContextAttrs);
+}
+
 void AppDelegate::loadAnalytics()
 {
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)

@@ -30,33 +30,53 @@ THE SOFTWARE.
 
 USING_NS_FENNEX;
 
-void openUrl(const char* url)
+void openUrl(const std::string& url)
 {
 	JniMethodInfo minfo;
 	CCAssert(JniHelper::getStaticMethodInfo(minfo, CLASS_NAME, "openUrl", "(Ljava/lang/String;)V"), "Function doesn't exist");
-	minfo.env->CallStaticBooleanMethod(minfo.env->FindClass(CLASS_NAME), minfo.env->GetStaticMethodID(minfo.env->FindClass(CLASS_NAME), "openUrl", "(Ljava/lang/String;)V"), minfo.env->NewStringUTF(url));
+    jstring jurl = minfo.env->NewStringUTF(url.c_str());
+	minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, jurl);
 	minfo.env->DeleteLocalRef(minfo.classID);
+	minfo.env->DeleteLocalRef(jurl);
 }
 
-void sendMail(const char* address, const char* subject, const char* message, const char* attachmentPlist)
+void sendMail(const std::string& address, const std::string& subject, const std::string& message, const std::string& attachmentPlist)
 {
 	JniMethodInfo minfo;
 	CCAssert(JniHelper::getStaticMethodInfo(minfo, CLASS_NAME, "sendMail", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"), "Function doesn't exist");
-	if(attachmentPlist == NULL)
+    jstring jaddress = minfo.env->NewStringUTF(address.c_str());
+    jstring jsubject = minfo.env->NewStringUTF(subject.c_str());
+    jstring jmessage = minfo.env->NewStringUTF(message.c_str());
+	if(attachmentPlist.empty())
 	{
-		minfo.env->CallStaticBooleanMethod(minfo.classID, minfo.methodID, minfo.env->NewStringUTF(address), minfo.env->NewStringUTF(subject), minfo.env->NewStringUTF(message));
+		minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, jaddress, jsubject, jmessage);
 	}
 	else
 	{
-		minfo.env->CallStaticBooleanMethod(minfo.classID, minfo.methodID, minfo.env->NewStringUTF(address), minfo.env->NewStringUTF(subject), minfo.env->NewStringUTF(message), minfo.env->NewStringUTF(attachmentPlist));
+        jstring jattachmentPlist = minfo.env->NewStringUTF(attachmentPlist.c_str());
+		minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, jaddress, jsubject, jmessage, jattachmentPlist);
+	    minfo.env->DeleteLocalRef(jattachmentPlist);
 	}
 	minfo.env->DeleteLocalRef(minfo.classID);
+	minfo.env->DeleteLocalRef(jaddress);
+	minfo.env->DeleteLocalRef(jsubject);
+	minfo.env->DeleteLocalRef(jmessage);
 }
 
-void sendBackgroundMail(std::string from, std::string password, std::string to, std::string subject, std::string message)
+void sendBackgroundMail(const std::string& from, const std::string& password, const std::string& to, const std::string& subject, const std::string& message)
 {
 	JniMethodInfo minfo;
 	CCAssert(JniHelper::getStaticMethodInfo(minfo, CLASS_NAME, "sendBackgroundMail", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"), "Function doesn't exist");
-    minfo.env->CallStaticBooleanMethod(minfo.classID, minfo.methodID, minfo.env->NewStringUTF(from.c_str()), minfo.env->NewStringUTF(password.c_str()), minfo.env->NewStringUTF(to.c_str()), minfo.env->NewStringUTF(subject.c_str()), minfo.env->NewStringUTF(message.c_str()));
+    jstring jfrom = minfo.env->NewStringUTF(from.c_str());
+    jstring jpassword = minfo.env->NewStringUTF(password.c_str());
+    jstring jto = minfo.env->NewStringUTF(to.c_str());
+    jstring jsubject = minfo.env->NewStringUTF(subject.c_str());
+    jstring jmessage = minfo.env->NewStringUTF(message.c_str());
+    minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, jfrom, jpassword, jto, jsubject, jmessage);
 	minfo.env->DeleteLocalRef(minfo.classID);
+	minfo.env->DeleteLocalRef(jfrom);
+	minfo.env->DeleteLocalRef(jpassword);
+	minfo.env->DeleteLocalRef(jto);
+	minfo.env->DeleteLocalRef(jsubject);
+	minfo.env->DeleteLocalRef(jmessage);
 }

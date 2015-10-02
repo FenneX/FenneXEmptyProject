@@ -257,6 +257,10 @@ void Scene::stop()
     
     delegate->removeChild(this, false);
     delegate->removeChild(Director::getInstance()->getNotificationNode(), false);
+    
+    //Clean Renderer because commands may rely on a Node, which was removed after the update, but before the render, which causes a crash
+    //For example, without this command, updating a RenderTexture during the same update will crash during SceneSwitch
+    Director::getInstance()->getRenderer()->clean();
 }
 
 //TODO : requires GraphicLayer and TouchLinker
@@ -363,6 +367,10 @@ void Scene::switchButton(Image* obj, bool state, Touch* touch)
         if (end && strcmp(end, "-on") == 0)
         {
             linker->linkTouch(touch, obj);
+        }
+        else
+        {
+            obj->removeEventInfo("_OriginalImageFile");
         }
     }
     else
@@ -513,7 +521,7 @@ Image* Scene::getButtonAtPosition(Vec2 position, bool state)
     for(int i = 0; i < objects->count() && target == NULL; i++)
     {
         RawObject* obj = (RawObject*)objects->objectAtIndex(i);
-        if(obj->isVisible() && obj->getEventActivated() && !obj->getEventName().empty() && obj->getEventName()[0] != '\0' && isKindOfClass(obj, Image))
+        if(obj->isVisible() && obj->getEventActivated() && !obj->getEventName().empty() && obj->getEventName()[0] != '\0' && dynamic_cast<Image*>(obj) != NULL)
         {
             //If state = false, the object imagefile must finish by "-on" and and have an _OriginalImageFile
             char *end = strrchr(((Image*)obj)->getImageFile().c_str(), '-');

@@ -31,7 +31,7 @@ NSString* getNSString(std::string path)
     return [NSString stringWithFormat:@"%s", path.c_str()];
 }
 
-float AudioPlayerRecorder::getSoundDuration(std::string file)
+float AudioPlayerRecorder::getSoundDuration(const std::string& file)
 {
     return [AudioPlayerRecorderImpl getSoundDuration:[NSString stringWithUTF8String:file.c_str()]];
 }
@@ -102,6 +102,7 @@ float AudioPlayerRecorder::play(const std::string& file, CCObject* linkTo, bool 
     }
     else
     {
+        interruptLoop = true;
         if(linkTo == link && this->isPlaying())
         {
             this->stopPlaying();
@@ -127,6 +128,7 @@ float AudioPlayerRecorder::play(const std::string& file, CCObject* linkTo, bool 
 
 void AudioPlayerRecorder::stopPlaying(EventCustom* event)
 {
+    interruptLoop = true;
     [[AudioPlayerRecorderImpl sharedAudio] stopPlaying];
     link = NULL; //don't call setLink to avoid infinite recursion
     this->setPath("");
@@ -146,11 +148,13 @@ void AudioPlayerRecorder::play()
 
 void AudioPlayerRecorder::pause()
 {
+    interruptLoop = true;
     [[AudioPlayerRecorderImpl sharedAudio] pause];    
 }
 
 void AudioPlayerRecorder::restart()
 {
+    interruptLoop = true;
     [[AudioPlayerRecorderImpl sharedAudio] restart];    
 }
 
@@ -159,9 +163,14 @@ void AudioPlayerRecorder::deleteFile(const std::string& file)
     [[AudioPlayerRecorderImpl sharedAudio] deleteFile:getNSString(file)];
 }
 
-void AudioPlayerRecorder::setNumberOfLoops(int loops)
+float AudioPlayerRecorder::getPlaybackRate()
 {
-    [[AudioPlayerRecorderImpl sharedAudio] setNumberOfLoops:loops];
+    return [AudioPlayerRecorderImpl sharedAudio].playbackRate;
+}
+
+void AudioPlayerRecorder::setPlaybackRate(float rate)
+{
+    [AudioPlayerRecorderImpl sharedAudio].playbackRate = rate;
 }
 
 CCDictionary* AudioPlayerRecorder::getFileMetadata(const std::string& path)

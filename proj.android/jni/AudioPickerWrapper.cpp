@@ -32,25 +32,25 @@ bool isAudioPickerExporting()
 	return false;
 }
 
-bool pickSound(const char* promptText, const char* saveName, const char* identifier)
+bool pickSound(const std::string& promptText, const std::string& saveName, const std::string& identifier)
 {
 	JniMethodInfo minfo;
 	CCAssert(JniHelper::getStaticMethodInfo(minfo, CLASS_NAME, "pickSound", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z"), "Function doesn't exist");
-	jstring jPromptText = minfo.env->NewStringUTF(promptText);
-	jstring jSaveName = minfo.env->NewStringUTF(saveName);
-	jstring jIdentifier = minfo.env->NewStringUTF(identifier);
+	jstring jPromptText = minfo.env->NewStringUTF(promptText.c_str());
+	jstring jSaveName = minfo.env->NewStringUTF(saveName.c_str());
+	jstring jIdentifier = minfo.env->NewStringUTF(identifier.c_str());
 	bool result = minfo.env->CallStaticBooleanMethod(minfo.classID, minfo.methodID, jPromptText, jSaveName, jIdentifier);
+    minfo.env->DeleteLocalRef(minfo.classID);
     minfo.env->DeleteLocalRef(jPromptText);
     minfo.env->DeleteLocalRef(jSaveName);
     minfo.env->DeleteLocalRef(jIdentifier);
-    minfo.env->DeleteLocalRef(minfo.classID);
     return result;
 }
 
-const char* audioPickerCurrentExport()
+std::string audioPickerCurrentExport()
 {
 	//TODO : not strictly necessary on Android, since it's close to instant
-	return NULL;
+	return "";
 }
 
 void stopAudioPickerExport()
@@ -62,6 +62,6 @@ extern "C"
 {
 	void Java_com_fennex_modules_AudioPicker_notifySoundPickedWrap(JNIEnv* env, jobject thiz, jstring name, jstring identifier)
 	{
-		notifySoundPicked(env->GetStringUTFChars(name, 0), env->GetStringUTFChars(identifier, 0));
+		notifySoundPicked(JniHelper::jstring2string(name), JniHelper::jstring2string(identifier));
 	}
 }

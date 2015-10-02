@@ -133,6 +133,17 @@ static AudioPlayerRecorderImpl* _sharedAudio = nil;
     return audioPlayer != nil ? audioPlayer.duration : 0;
 }
 
+- (float) playbackRate
+{
+    return desiredPlaybackRate;
+}
+
+- (void) setPlaybackRate:(float)rate
+{
+    //We can't modify the rate of a sound while playing it anyway
+    desiredPlaybackRate = rate;
+}
+
 - (id) init
 {
 	self = [super init];
@@ -140,7 +151,8 @@ static AudioPlayerRecorderImpl* _sharedAudio = nil;
 	{
 		recordEncoding = ENC_AAC;
         audioPlayer = nil;
-		
+        
+        desiredPlaybackRate = 1;
 		error = nil;
         
         [self setRecordEnabled:NO];
@@ -257,6 +269,7 @@ static AudioPlayerRecorderImpl* _sharedAudio = nil;
 	if(audioPlayer)
 	{
 		[audioPlayer stop];
+        [audioPlayer setDelegate:nil];
 		[audioPlayer release];
         audioPlayer = nil;
 	}
@@ -303,6 +316,11 @@ static AudioPlayerRecorderImpl* _sharedAudio = nil;
 	if(audioPlayer != nil)
 	{
         audioPlayer.currentTime = startTime;
+        if(desiredPlaybackRate != 1)
+        {
+            audioPlayer.enableRate = YES;
+            audioPlayer.rate = desiredPlaybackRate;
+        }
 		if([audioPlayer play])
         {
 #if VERBOSE_AUDIO
@@ -318,14 +336,6 @@ static AudioPlayerRecorderImpl* _sharedAudio = nil;
 #endif
 	}
     return 0;
-}
-
-- (void) setNumberOfLoops:(int)loops
-{
-    if(audioPlayer != nil)
-    {
-        audioPlayer.numberOfLoops = loops;
-    }
 }
 
 - (float) playIndependentFile:(NSString*)file
@@ -358,7 +368,11 @@ static AudioPlayerRecorderImpl* _sharedAudio = nil;
     if(player != nil)
     {
         player.delegate = self;
-        player.numberOfLoops = 0;
+        if(desiredPlaybackRate != 1)
+        {
+            player.enableRate = YES;
+            player.rate = desiredPlaybackRate;
+        }
 		if([player play])
         {
 #if VERBOSE_AUDIO
@@ -403,6 +417,11 @@ static AudioPlayerRecorderImpl* _sharedAudio = nil;
 
 - (void) play
 {
+    if(desiredPlaybackRate != 1)
+    {
+        audioPlayer.enableRate = YES;
+        audioPlayer.rate = desiredPlaybackRate;
+    }
     [audioPlayer play];
 }
 
@@ -414,6 +433,10 @@ static AudioPlayerRecorderImpl* _sharedAudio = nil;
 - (void) restart
 {
     [audioPlayer setCurrentTime:0.0];
+    if(![self isPlaying])
+    {
+        [self play];
+    }
 }
 
 - (void) audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag
@@ -424,6 +447,7 @@ static AudioPlayerRecorderImpl* _sharedAudio = nil;
     }
     else if(player != audioPlayer)
     {
+        [audioPlayer setDelegate:nil];
         [player autorelease];
     }
 }

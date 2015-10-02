@@ -45,6 +45,7 @@ AudioPlayerRecorder::AudioPlayerRecorder()
 {
     link = NULL;
     path = "";
+    loops = 0;
     noLinkObject = Node::create(); //the exact type isn't important, it just needs to be a Ref*
     noLinkObject->retain();
     recordEnabled = false;
@@ -168,7 +169,46 @@ std::string AudioPlayerRecorder::getPathWithoutExtension()
     return path;
 }
 
-void AudioPlayerRecorder::setPath(std::string value)
+
+void AudioPlayerRecorder::setNumberOfLoops(int loops, float pauseBetween)
+{ //Looping is done is common code because pauseBetween isn't supported by any platform
+    //Looping itself is fully supported on iOS, partially on MediaPlayer (only infinite) and partially on LibVLC (using MediaList, which is more of a workaround than real looping)
+    this->loops = loops;
+    this->pauseBetween = pauseBetween;
+}
+
+void AudioPlayerRecorder::onSoundEnded()
+{
+    if(loops > 0 || loops == -1)
+    {
+        if(pauseBetween <= 0)
+        {
+            this->restart();
+        }
+        else
+        {
+            interruptLoop = false;
+            DelayedDispatcher::funcAfterDelay([this](EventCustom* event)
+            {
+                if(!interruptLoop)
+                {
+                    this->restart();
+                }
+            }, NULL, pauseBetween);
+        }
+        if(loops != -1)
+        {
+            loops--;
+        }
+    }
+    else
+    {
+        pauseBetween = 0;
+        DelayedDispatcher::eventAfterDelay("PlayingSoundEnded", Dcreate(), 0.01);
+    }
+}
+
+void AudioPlayerRecorder::setPath(const std::string& value)
 {
     if(path.compare(value) != 0)
     {

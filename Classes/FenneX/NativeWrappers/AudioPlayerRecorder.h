@@ -54,7 +54,16 @@ public:
     static AudioPlayerRecorder* sharedRecorder(void);
     ~AudioPlayerRecorder();
     
-    static float getSoundDuration(std::string file);
+#if CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
+    //On Android, the default implementation use MediaPlayer
+    //You can use LibVLC (which requires a different compilation script and additional files not in FenneX)
+    //LibVLC allow to change PlaybackRate, which is not possible with MediaPlayer
+    //It also support more formats
+    //LibVLC doesn't support reading files from the .apk. Use an uncompressed expansion instead.
+    static void setUseVLC(bool useVLC);
+#endif
+    
+    static float getSoundDuration(const std::string& file);
     static std::string getSoundsSavePath();
     
     //By default, recording is disabled (to avoid prompting for microphone on iOS)
@@ -78,9 +87,9 @@ public:
     bool isRecording();
     bool isPlaying();
     
-    void record(const std::string&  file, Ref* linkTo);
+    void record(const std::string& file, Ref* linkTo);
     void stopRecording();
-    float play(const std::string&  file, Ref* linkTo, bool independent = false); //return the duration of the file
+    float play(const std::string& file, Ref* linkTo, bool independent = false); //return the duration of the file
     void stopPlaying(EventCustom* event = NULL);
     void fadeVolumeOut();
     
@@ -91,7 +100,16 @@ public:
     //deleteFile requires the full path including the extension
     void deleteFile(const std::string& file);
     
-    void setNumberOfLoops(int loops);
+    //Must be called before playing a sound. The rate is global for all subsequent play sound
+    float getPlaybackRate();
+    void setPlaybackRate(float rate);
+    
+    //The number of loops is reset at each play sound, and can be called before or after play
+    //Set loops to -1 to have infinite looping
+    void setNumberOfLoops(int loops, float pauseBetween = 0);
+    
+    //FOR INTERNAL USE
+    void onSoundEnded();
     
     /* Get the file metadata, if available :
         - Author (CCString)
@@ -105,18 +123,27 @@ protected:
     void init();
     Ref* link; //the object that required the record/play
     std::string path; //the current path being recorded/played
-    void setPath(std::string value);
+    void setPath(const std::string& value);
     void setLink(Ref* value);
     bool recordEnabled;
     
     Ref* noLinkObject; //If a sound have no link, it is linked to this object so that everything works well
     Vector<EventListenerCustom*> listeners;
+    
+    //The number of remaining loops. Usually 0 for single play, otherwise -1 for infinite, or positive indicating the number remaining after current one
+    int loops;
+    
+    //The seconds of pause between loops. Any negative value is the same as 0
+    float pauseBetween;
+    
+    //Internal flag to signal to the looping mechanism with pause that the current play has been interrupted during the pause, and must not be played. It can be interrupted by an non-independant play, pause, restart or stopPlaying methods
+    bool interruptLoop;
 };
 #endif
 
 static inline void notifyPlayingSoundEnded()
 {
-    DelayedDispatcher::eventAfterDelay("PlayingSoundEnded", Dcreate(), 0.01);
+    AudioPlayerRecorder::sharedRecorder()->onSoundEnded();
 }
 
 #endif

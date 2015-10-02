@@ -175,14 +175,13 @@ public class InAppManager implements ActivityResultResponder
 		        else 
 		        {
 		        	Purchase premiumPurchase = mInventory.getPurchase(productID);
+                    //Purchase state = 0 means purchased. 1 is canceled (allow to re-buy), 2 is refunded (allow to re-buy)
 		            if(premiumPurchase != null && verifyDeveloperPayload(premiumPurchase) && premiumPurchase.getPurchaseState() == 0)
 		            {
 		            	Log.d(TAG, "Restoring product");
 		                getInstance().notifyInAppEvent("ProductRestored", productID);
 		                return;
 		            }
-		            else
-		            	getInstance().notifyInAppEvent("ErrorTransactionFailure", productID);
 		        }
 		        if (mHelper != null) 
 		        	mHelper.flagEndAsync();
@@ -453,7 +452,11 @@ public class InAppManager implements ActivityResultResponder
 		            	if(NativeUtility.getMainActivity().isConsumable(purchase.getSku()))
 		            	{
 		                	Log.d(TAG, "Purchase successful, consuming it, sku : " + purchase.getSku());
-		            		mHelper.consumeAsync(purchase, mConsumeFinishedListener);
+                            NativeUtility.getMainActivity().runOnUiThread(new Runnable() {
+                                public void run() {
+                                    mHelper.consumeAsync(purchase, mConsumeFinishedListener);
+                                }
+                            });
 		            	}
 		            	else
 		            	{

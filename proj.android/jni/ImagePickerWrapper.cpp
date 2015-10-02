@@ -30,12 +30,12 @@ THE SOFTWARE.
 
 USING_NS_FENNEX;
 
-bool pickImageFrom(const char* saveName, bool useCamera, int width, int height, const char* identifier, bool rescale, float thumbnailScale)
+bool pickImageFrom(const std::string& saveName, bool useCamera, int width, int height, const std::string& identifier, bool rescale, float thumbnailScale)
 {
 	JniMethodInfo minfo;
 	CCAssert(JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"pickImageFrom", "(Ljava/lang/String;ZIILjava/lang/String;FZ)Z"), "Function doesn't exist");
-	jstring jSaveName = minfo.env->NewStringUTF(saveName);
-	jstring jIdentifier = minfo.env->NewStringUTF(identifier);
+	jstring jSaveName = minfo.env->NewStringUTF(saveName.c_str());
+	jstring jIdentifier = minfo.env->NewStringUTF(identifier.c_str());
 	bool result = minfo.env->CallStaticBooleanMethod(minfo.classID,
 													 minfo.methodID,
 													 jSaveName,
@@ -65,6 +65,6 @@ extern "C"
 	//extension for long name : __Ljava_lang_String_2Ljava_lang_String_2
 	void Java_com_fennex_modules_ImagePicker_notifyImagePickedWrap(JNIEnv* env, jobject thiz, jstring name, jstring identifier)
 	{
-		notifyImagePicked(env->GetStringUTFChars(name, 0), env->GetStringUTFChars(identifier, 0));
+		notifyImagePicked(JniHelper::jstring2string(name), JniHelper::jstring2string(identifier));
 	}
 }

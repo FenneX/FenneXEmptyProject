@@ -25,11 +25,14 @@ THE SOFTWARE.
 package com.fennex.modules;
 
 import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.cocos2dx.lib.Cocos2dxActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.widget.FrameLayout;
@@ -40,10 +43,16 @@ import android.widget.FrameLayout;
  */
 public abstract class ActivityResultNotifier extends Cocos2dxActivity implements MainActivityUtility
 {
+    protected SplashDialog splashDialog;
 	private ArrayList<ActivityResultResponder> responders;
 	private ArrayList<ActivityObserver> observers;
 	private boolean active = false;
 	public boolean isActive() { return active; }
+
+    //The minimum duration is the fade_in duration, default to 500, try to load from config, plus a flat time after anim
+    final private long SPLASH_DURATION_AFTER_ANIM = 500;
+    private long splashMinDuration = 500 + SPLASH_DURATION_AFTER_ANIM;
+    private long launchTime = 0;
 	
 	public ActivityResultNotifier()
 	{
@@ -53,13 +62,41 @@ public abstract class ActivityResultNotifier extends Cocos2dxActivity implements
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
 	{
+        if(getSplashScreenLayout() != -1 && getSplashScreenImageID() != -1) {
+            splashDialog = new SplashDialog(this, getSplashScreenLayout(), getSplashScreenImageID());
+            splashDialog.show();
+            launchTime = SystemClock.elapsedRealtime();
+        }
 		super.onCreate(savedInstanceState);
+        splashMinDuration = getResources().getInteger(android.R.integer.config_longAnimTime) + SPLASH_DURATION_AFTER_ANIM;
     	NativeUtility.setMainActivity(this);
 		for(ActivityObserver observer : observers)
 		{
 			observer.onStateChanged(ActivityObserver.CREATE);
 		}
 	}
+
+    public void discardSplashDialog()
+    {
+        if(splashDialog != null) {
+            final long currentTime = SystemClock.elapsedRealtime();
+            //Ensure the splashScreen is longer than the animation
+            if(currentTime - launchTime > splashMinDuration) {
+                splashDialog.cancel();
+                splashDialog = null;
+            }
+            else {
+                Log.i("IFeel", "Duration of runnable : " + (splashMinDuration - (currentTime - launchTime)));
+                new Timer().schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        splashDialog.discard();
+                        splashDialog = null;
+                    }
+                }, splashMinDuration - (currentTime - launchTime));
+            }
+        }
+    }
 	
 	@Override
 	public void addResponder(ActivityResultResponder responder) {
@@ -115,6 +152,12 @@ public abstract class ActivityResultNotifier extends Cocos2dxActivity implements
 		super.onNewIntent(intent);
 	}
 	
+	@Override
+	public boolean onKeyDown(final int pKeyCode, final KeyEvent pKeyEvent) {
+		// This is done to handle problem from having a surfaceview (like in VideoPLayer) overriding onKeyDown. ( So we override it again)
+		return org.cocos2dx.lib.Cocos2dxGLSurfaceView.getInstance().onKeyDown(pKeyCode, pKeyEvent);
+	}
+
 	@Override
 	public void onLowMemory()
 	{
@@ -188,6 +231,10 @@ public abstract class ActivityResultNotifier extends Cocos2dxActivity implements
 	@Override
 	public void onStop()
 	{
+        if(splashDialog != null) {
+            splashDialog.cancel();
+            splashDialog = null;
+        }
 		super.onStop();
 		active = false;
 		for(ActivityObserver observer : observers)
@@ -209,6 +256,10 @@ public abstract class ActivityResultNotifier extends Cocos2dxActivity implements
 	@Override
 	public void onDestroy()
 	{
+        if(splashDialog != null) {
+            splashDialog.cancel();
+            splashDialog = null;
+        }
         for(ActivityResultResponder responder : responders)
         {
             responder.destroy();

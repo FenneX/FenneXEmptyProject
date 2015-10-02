@@ -45,6 +45,7 @@ import android.media.ToneGenerator;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
+import android.os.Environment;
 import android.os.Vibrator;
 import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
@@ -73,6 +74,16 @@ public class NativeUtility
 		}
 		return mainActivity;
 	}
+
+    public static void discardSplashScreen()
+    {
+        getMainActivity().discardSplashDialog();
+    }
+
+    public static String getPublicPath()
+    {
+        return Environment.getExternalStorageDirectory().getAbsolutePath();
+    }
 
     public static String getLocalPath()
     {
@@ -125,7 +136,12 @@ public class NativeUtility
         File destinationFile = new File(NativeUtility.getLocalPath() + java.io.File.separator + path);    
     	if(!destinationFile.exists())
     	{
-         	Log.i(TAG, "File doesn't exist, doing the copy");
+            if(path.contains("/"))
+            {
+                File parentFolder = new File(NativeUtility.getLocalPath() + java.io.File.separator + path.substring(0, path.lastIndexOf("/")));
+                parentFolder.mkdirs();
+            }
+         	Log.i(TAG, "File doesn't exist, doing the copy to " + destinationFile.getAbsolutePath());
             AssetManager am = NativeUtility.getMainActivity().getAssets();
             try { 
                 InputStream in = am.open(path);
@@ -246,6 +262,15 @@ public class NativeUtility
                     }
         }
         return false;
+    }
+
+    public static void openWifiSettings()
+    {
+        if(getMainActivity() != null)
+        {
+            Intent intent = new Intent(Settings.ACTION_WIFI_SETTINGS);
+            getMainActivity().startActivity(intent);
+        }
     }
     
     public static void vibrate(int milliseconds)

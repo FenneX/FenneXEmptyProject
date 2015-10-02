@@ -30,18 +30,16 @@ THE SOFTWARE.
 #include "FenneXMacros.h"
 #include "TMPPoint.h"
 #include "DelayedDispatcher.h"
+#include <string>
+#include <sstream>
 USING_NS_CC;
 
 NS_FENNEX_BEGIN
-#define isKindOfClass(obj,class) (dynamic_cast<class*>(obj) != NULL)
 
-//Compensate for scale factor for image picked by user
-#define AUTO_SCALE (Fcreate(Director::getInstance()->getContentScaleFactor() ))
+//Warning: it doesn't work well in Fast mode when trying to check for non-cocos class. You should inline the dynamic cast in this case.
+#define isKindOfClass(obj,class) (dynamic_cast<class*>((Ref*)obj) != NULL)
 
 #define IFEXIST(obj) if(obj != NULL) (obj)
-
-#define REAL_SCALE(obj) (Fcreate(obj \
-* Director::getInstance()->getContentScaleFactor() ))
 
 #define TOINT(obj) (((CCInteger*)obj)->getValue())
 #define TOFLOAT(obj) (((CCFloat*)obj)->getValue())
@@ -71,26 +69,12 @@ NS_FENNEX_BEGIN
 #define Acreate CCArray::create
 #define AcreateP createArrayWithParameters
 
-CCString* getResourcesPath(const char* file);
+std::string getResourcesPath(const std::string& file);
 
 cocos2d::Size* sizeCreate(float width = 0, float height = 0);
 //note : keys have to be passed as CCString, unfortunately. Must be NULL terminated
 CCDictionary* createDictionaryWithParameters(Ref* firstObject, ... );
 CCArray* createArrayWithParameters(Ref* firstObject, ... );
-
-//perform a selector after a delay. All pending selector will be cancelled during a scene switch (it's assumed most of them are tied to the current Scene)
-/* Obsolete functions. Please use DelayedDispatcher
- 
- Replaced by DelayedDispatcher::funcAfterDelay (requires to merge first 2 argument into a std::function, and change delay/object order)
-void performSelectorAfterDelay(Ref* target, SEL_CallFuncO selector, float delay, Ref* object = NULL);
- 
- Replaced by DelayedDispatcher::cancelFunc (requires to use std::string as identifiers)
-bool cancelSelector(Ref* target, SEL_CallFuncO selector);
- 
- Replaced by DelayedDispatcher::eventAfterDelay (simple replace)
-void performNotificationAfterDelay(const char* name, Ref* obj, float delay);*/
-
-#define performNotificationAfterDelay DelayedDispatcher::eventAfterDelay
 
 static inline cocos2d::Size
 SizeMult(const cocos2d::Size& v, const float s)
@@ -103,7 +87,7 @@ static inline bool isColorEqual(const Color3B left, const Color3B right)
     return left.r == right.r && left.g == right.g && left.b == right.b;
 }
 
-static inline bool hasEnding (std::string const &fullString, std::string const &ending)
+static inline bool hasEnding (const std::string &fullString, const std::string &ending)
 {
     if (fullString.length() >= ending.length()) {
         return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
@@ -112,11 +96,20 @@ static inline bool hasEnding (std::string const &fullString, std::string const &
     }
 }
 
-static inline float getTimeDifferenceMS(timeval& start, timeval& end)
+static inline float getTimeDifferenceMS(const timeval& start, const timeval& end)
 {
     return ((((end.tv_sec - start.tv_sec)*1000.0f
              +end.tv_usec) - start.tv_usec) / 1000.0f);
 }
+
+//std::to_string isn't always defined on Android, use this method as a replacement.
+template < typename T > std::string to_string( const T& n )
+{
+    std::ostringstream stm;
+    stm << n ;
+    return stm.str();
+}
+
 /*
 class Shorteners : public Ref
 {

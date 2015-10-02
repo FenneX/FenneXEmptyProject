@@ -212,27 +212,27 @@ Ref* loadObjectFromFile(const char* name, bool resource)
 #if VERBOSE_LOAD_PLIST
     CCLOG("local path : %s", getLocalPath(name).c_str());
 #endif
-    unsigned char * charbuffer = NULL;
+    std::string charbuffer = "";
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
     if(resource)
     {
         ssize_t bufferSize = 0;
         //Load file from apk
-        charbuffer = FileUtils::getInstance()->getFileData(name,"r", &bufferSize);
+        charbuffer = FileUtils::getInstance()->getStringFromFile(name);
     }
     std::string path = resource ? "" : getLocalPath(name);
 #else
-    std::string path = resource ? getResourcesPath(name)->getCString() : getLocalPath(name);
+    std::string path = resource ? getResourcesPath(name) : getLocalPath(name);
 #endif
 #if VERBOSE_LOAD_PLIST
     CCLOG("Loading from path :\n%s", path.c_str());
 #endif
     xml_parse_result parse_result;
     //If the file inside the apk doesn't exist, we load the local file.
-    if(charbuffer == NULL)
+    if(charbuffer.empty())
         parse_result = doc.load_file(path.c_str());
     else
-        parse_result = doc.load((char*)charbuffer);
+        parse_result = doc.load(charbuffer.c_str());
 #if VERBOSE_LOAD_PLIST
     CCLOG("parse result : %d", parse_result.status);
 #endif
@@ -271,19 +271,19 @@ Ref* loadObjectFromFile(const char* name, bool resource)
 
 void deleteFile(const char* name)
 {
-    const char* path = getLocalPath(name).c_str();
+    std::string path = getLocalPath(name);
 #if VERBOSE_SAVE_PLIST
-    int result = unlink(path);
+    int result = unlink(path.c_str());
     if(result == 0)
     {
-        CCLOG("file %s removed successfully", path);
+        CCLOG("file %s removed successfully", path.c_str());
     }
     else
     {
-        CCLOG("Problem removing file %s, error : %d", path, errno);
+        CCLOG("Problem removing file %s, error : %d", path.c_str(), errno);
     }
 #else
-    unlink(path);
+    unlink(path.c_str());
 #endif
 }
 NS_FENNEX_END

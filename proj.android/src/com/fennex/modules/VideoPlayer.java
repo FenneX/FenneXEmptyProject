@@ -30,6 +30,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.FrameLayout;
@@ -228,7 +229,8 @@ public class VideoPlayer extends Handler implements IVideoPlayer
     				video.setVideoURI(uri);
             		FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
             				VideoPlayer.isFullScreen ? (int) VideoPlayer.widthScreen : (int) VideoPlayer.localWidth, 
-            				VideoPlayer.isFullScreen ? (int) VideoPlayer.heightScreen : (int) VideoPlayer.localHeight);
+            				VideoPlayer.isFullScreen ? (int) VideoPlayer.heightScreen : (int) VideoPlayer.localHeight,
+							Gravity.CENTER);
             		lp.leftMargin = (int)(VideoPlayer.isFullScreen ? 0 : widthScreen - localX - (localWidth / 2) + 0.5);
             		lp.topMargin = (int)(VideoPlayer.isFullScreen ? 0 : heightScreen - localY - (localHeight / 2) + 0.5);
             		video.setLayoutParams(lp);
@@ -318,25 +320,22 @@ public class VideoPlayer extends Handler implements IVideoPlayer
 		NativeUtility.getMainActivity().runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
-				if(base != null && videoView != null)
-				{
-					if(useVLC)
-					{
+				if (base != null && videoView != null) {
+					if (useVLC) {
 						try {
 							LibVlcUtil.getLibVlcInstance().stop();
 						} catch (LibVlcException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
-					}
-					else
-					{
-						((VideoView)videoView).stopPlayback();
+					} else {
+						((VideoView) videoView).stopPlayback();
 					}
 					base.removeAllViews();
 					mainFrame.removeView(base);
 				}
-			}});
+			}
+		});
 	}
 
 	public static float getPlaybackRate()
@@ -546,6 +545,16 @@ public class VideoPlayer extends Handler implements IVideoPlayer
 			thumbPath = null;
 		}
 		return thumbPath;
+	}
+
+	public static boolean isValidVideo(String path)
+	{
+		int dotIndex = path.lastIndexOf(".");
+		if (dotIndex != -1) {
+			String fileExt = path.substring(dotIndex);
+			return videoExists(path) && Media.VIDEO_EXTENSIONS.contains(fileExt);
+		}
+		return false;
 	}
 	
 	public static boolean videoExists(String path)

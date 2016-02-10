@@ -112,6 +112,8 @@
 		8449D54F1BBE873F0067ADA3 /* CustomDropDownList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8449D54D1BBE873F0067ADA3 /* CustomDropDownList.cpp */; };
 		8449D5531BBE88C60067ADA3 /* FileUtility.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8449D5501BBE88C60067ADA3 /* FileUtility.mm */; };
 		8449D5541BBE88C60067ADA3 /* TTS.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8449D5521BBE88C60067ADA3 /* TTS.mm */; };
+		84578A771C6B72490058EAAA /* NetworkUtility.mm in Sources */ = {isa = PBXBuildFile; fileRef = 84578A761C6B72490058EAAA /* NetworkUtility.mm */; };
+		84578A791C6B75390058EAAA /* libiconv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 84578A781C6B75390058EAAA /* libiconv.tbd */; };
 		BF171245129291EC00B8313A /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF170DB012928DE900B8313A /* OpenGLES.framework */; };
 		BF1712471292920000B8313A /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = BF170DB412928DE900B8313A /* libz.dylib */; };
 		BF1C47F01293687400B63C5D /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF1C47EA1293683800B63C5D /* QuartzCore.framework */; };
@@ -347,6 +349,9 @@
 		8449D5501BBE88C60067ADA3 /* FileUtility.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = FileUtility.mm; sourceTree = "<group>"; };
 		8449D5511BBE88C60067ADA3 /* TTS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TTS.h; sourceTree = "<group>"; };
 		8449D5521BBE88C60067ADA3 /* TTS.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TTS.mm; sourceTree = "<group>"; };
+		84578A751C6B72370058EAAA /* NetworkUtility.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetworkUtility.h; sourceTree = "<group>"; };
+		84578A761C6B72490058EAAA /* NetworkUtility.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = NetworkUtility.mm; sourceTree = "<group>"; };
+		84578A781C6B75390058EAAA /* libiconv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.tbd; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS9.2.sdk/usr/lib/libiconv.tbd; sourceTree = DEVELOPER_DIR; };
 		BF170DB012928DE900B8313A /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
 		BF170DB412928DE900B8313A /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
 		BF1C47EA1293683800B63C5D /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
@@ -361,6 +366,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				84578A791C6B75390058EAAA /* libiconv.tbd in Frameworks */,
 				1AC6FB30180E99EB004C840B /* libcocos2d iOS.a in Frameworks */,
 				6A99878C19A1ED5700CB7183 /* AssetsLibrary.framework in Frameworks */,
 				6A99878B19A1ED5700CB7183 /* MobileCoreServices.framework in Frameworks */,
@@ -481,6 +487,7 @@
 		29B97323FDCFA39411CA2CEA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				84578A781C6B75390058EAAA /* libiconv.tbd */,
 				6A99877B19A1ED5700CB7183 /* CoreData.framework */,
 				6A99877C19A1ED5700CB7183 /* MediaPlayer.framework */,
 				6A99877D19A1ED5700CB7183 /* MessageUI.framework */,
@@ -623,6 +630,7 @@
 			isa = PBXGroup;
 			children = (
 				8449D5501BBE88C60067ADA3 /* FileUtility.mm */,
+				84578A761C6B72490058EAAA /* NetworkUtility.mm */,
 				8449D5511BBE88C60067ADA3 /* TTS.h */,
 				8449D5521BBE88C60067ADA3 /* TTS.mm */,
 				6A35C931199D074A009A2D9C /* MailUrlWrapper.mm */,
@@ -817,6 +825,7 @@
 		6A35C9D8199D07BE009A2D9C /* NativeWrappers */ = {
 			isa = PBXGroup;
 			children = (
+				84578A751C6B72370058EAAA /* NetworkUtility.h */,
 				8449D5481BBE86110067ADA3 /* DropDownListWrapper.h */,
 				8449D5491BBE86110067ADA3 /* FileUtility.h */,
 				6A35C9D9199D07BE009A2D9C /* AnalyticsWrapper.cpp */,
@@ -993,6 +1002,7 @@
 				6A35CA2C199D07BE009A2D9C /* TapRecognizer.cpp in Sources */,
 				6A35C955199D074A009A2D9C /* NativeUtility.mm in Sources */,
 				8449D54C1BBE86220067ADA3 /* DropDownList.cpp in Sources */,
+				84578A771C6B72490058EAAA /* NetworkUtility.mm in Sources */,
 				6A35C95C199D074A009A2D9C /* VideoRecorder.mm in Sources */,
 				6A8BA96A1AA76C41002E97E0 /* DelayedDispatcher.cpp in Sources */,
 				6A35C949199D074A009A2D9C /* AudioPlayerRecorderWrapper.mm in Sources */,

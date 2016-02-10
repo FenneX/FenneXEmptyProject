@@ -22,7 +22,6 @@
  THE SOFTWARE.
  ****************************************************************************///
 
-#include "Logs.h"
 #include "AppDelegate.h"
 #include "AppMacros.h"
 #include "editor-support/cocosbuilder/CocosBuilder.h"

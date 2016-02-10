@@ -71,4 +71,14 @@ public class EmptyProject extends ActivityResultNotifier {
 		// TODO Auto-generated method stub
 		return false;
 	}
+
+	@Override
+	public int getSplashScreenLayout() {
+		return 0;
+	}
+
+	@Override
+	public int getSplashScreenImageID() {
+		return 0;
+	}
 }

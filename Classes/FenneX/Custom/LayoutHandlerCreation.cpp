@@ -22,7 +22,6 @@
  THE SOFTWARE.
  ****************************************************************************///
 
-#include "Logs.h"
 #include "LayoutHandler.h"
 #include "Monkey.h"
 #include "AppMacros.h"

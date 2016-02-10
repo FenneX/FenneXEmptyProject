@@ -37,7 +37,6 @@ LOCAL_CXXFLAGS += -fexceptions
 include $(BUILD_SHARED_LIBRARY)
 
 $(call import-module,.)
-$(call import-module,audio/android)
 
 # $(call import-module,Box2D)
 $(call import-module,editor-support/cocosbuilder)

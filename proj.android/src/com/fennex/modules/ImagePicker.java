@@ -227,8 +227,22 @@ public class ImagePicker implements ActivityResultResponder
     	return NativeUtility.getMainActivity().getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT) ||
     			NativeUtility.getMainActivity().getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA);
     }
+
+    public enum PICK_OPTION {
+        CAMERA(0),
+        PHOTO_LIBRARY(1),
+        FILE_LIBRARY(2);
+
+        private final int value;
+
+        PICK_OPTION(final int newValue) {
+            value = newValue;
+        }
+
+        public int getValue() { return value; }
+    }
     
-    public static boolean pickImageFrom(String saveName, boolean useCamera, int width, int height, String identifier, float thumbnailScale, boolean rescale)
+    public static boolean pickImageFrom(String saveName, int pickOption, int width, int height, String identifier, float thumbnailScale, boolean rescale)
     {
     	ImagePicker.getInstance(); //ensure the instance is created
     	_fileName = saveName.concat(".png");
@@ -238,7 +252,7 @@ public class ImagePicker implements ActivityResultResponder
         _thumbnailScale = thumbnailScale;
         _rescale = rescale;
     	boolean error = false;
-    	if(useCamera)
+    	if(pickOption == PICK_OPTION.CAMERA.getValue())
     	{
     		try
     		{
@@ -261,14 +275,25 @@ public class ImagePicker implements ActivityResultResponder
     	{
     		try
     		{
-    			Intent intent = new Intent(Intent.ACTION_PICK,android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-    			intent.setType("image/*");
+                Intent intent;
+                if(pickOption == PICK_OPTION.PHOTO_LIBRARY.getValue())
+                {
+                    intent = new Intent(Intent.ACTION_PICK,android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                }
+                else
+                {
+                    intent = new Intent(Intent.ACTION_GET_CONTENT ,android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                    intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+                }
+                intent.setType("image/*");
                 isPending = true;
-    			NativeUtility.getMainActivity().startActivityForResult(intent, PICTURE_GALLERY);
+                NativeUtility.getMainActivity().startActivityForResult(intent, PICTURE_GALLERY);
     		}
     		catch(ActivityNotFoundException e)
     		{
-    	    	Log.d(TAG, "intent for image pick from library not found : " + e.getMessage());
+                if(pickOption == 1) Log.d(TAG, "intent for image pick from Galery not found : " + e.getMessage());
+                else Log.d(TAG, "intent for image pick from File library not found : " + e.getMessage());
+
     	    	error = true;
     		}
     	}

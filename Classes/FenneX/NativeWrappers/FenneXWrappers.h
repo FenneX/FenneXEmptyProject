@@ -33,6 +33,7 @@ THE SOFTWARE.
 #include "LocalNotificationWrapper.h"
 #include "MailUrlWrapper.h"
 #include "NativeUtility.h"
+#include "NetworkUtility.h"
 #include "VideoPickerWrapper.h"
 #include "VideoPlayer.h"
 

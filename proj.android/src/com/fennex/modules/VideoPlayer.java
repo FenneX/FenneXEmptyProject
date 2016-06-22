@@ -157,7 +157,8 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 						// Create media player
 						vlcMediaPlayer = new org.videolan.libvlc.MediaPlayer(libVLC);
 						vlcMediaPlayer.setEventListener(mPlayerListener);
-
+						Media m = new Media(libVLC, path);
+						vlcMediaPlayer.setMedia(m);
 						// Set up video output
 						final IVLCVout vout = vlcMediaPlayer.getVLCVout();
 						vout.setVideoView(videoView);
@@ -272,9 +273,7 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 		Log.i(TAG, "Play.");
 		if(useVLC)
 		{
-			Media m = new Media(libVLC, path);
 			if(vlcMediaPlayer != null) {
-				vlcMediaPlayer.setMedia(m);
 				vlcMediaPlayer.play();
 			}
 			else
@@ -697,7 +696,7 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 		this.play();
 	}
 
-	private static class MyPlayerListener implements  org.videolan.libvlc.MediaPlayer.EventListener {
+	private static class MyPlayerListener implements org.videolan.libvlc.MediaPlayer.EventListener {
 		private WeakReference<VideoPlayer> mOwner;
 
 		public MyPlayerListener(VideoPlayer owner) {
@@ -711,7 +710,13 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 			switch(event.type) {
 				case org.videolan.libvlc.MediaPlayer.Event.EndReached:
 					Log.d(TAG, "MediaPlayerEndReached");
-					player.releasePlayer();
+					NativeUtility.getMainActivity().runOnGLThread(new Runnable()
+					{
+						public void run()
+						{
+							notifyVideoEnded(path);
+						}
+					});
 					break;
 				case org.videolan.libvlc.MediaPlayer.Event.Playing:
 				case org.videolan.libvlc.MediaPlayer.Event.Paused:

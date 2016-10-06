@@ -32,9 +32,7 @@
 
 #import "ImagePicker.h"
 #import "FenneX.h"
-#import "Flurry.h"
 #import "AppMacros.h"
-#import "TestFlight.h"
 #include "NativeUtility.h"
 #include "Shorteners.h"
 
@@ -125,8 +123,6 @@ void uncaughtExceptionHandler(NSException *exception)
 {
     NSLog(@"CRASH: %@", exception);
     NSLog(@"Stack Trace: %@", [exception callStackSymbols]);
-    // Internal error reporting
-    [Flurry logError:@"Uncaught" message:@"Crash!" exception:exception];
 }
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
@@ -174,16 +170,6 @@ void uncaughtExceptionHandler(NSException *exception)
     cocos2d::Director::getInstance()->setOpenGLView(glview);
     
     cocos2d::Application::getInstance()->run();
-    
-#ifdef TESTFLIGHT_TOKEN
-#if DEBUG_ANALYTICS
-    [TestFlight takeOff:TESTFLIGHT_TOKEN];
-#else
-    NSLog(@"Not in debug mode, not launching testflight");
-#endif
-#else
-    NSLog(@"TestFlight token not defined, not launching it");
-#endif
     
     NSLog(@"app launch");
     if([launchOptions objectForKey:UIApplicationLaunchOptionsLocalNotificationKey] != NULL)

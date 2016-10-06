@@ -32,7 +32,7 @@
 #include "CCJniConversion.h"
 #include <string>
 
-#define CLASS_NAME "com/diwublog/AnalyticX/AnalyticXBridge"
+#define CLASS_NAME "com/fennex/modules/Analytics"
 
 using namespace std;
 
@@ -62,33 +62,6 @@ std::string AnalyticsWrapper::GAGetGAAgentVersion()
      * No method available to retrieve the version of GA.
      */
     return "";
-}
-
-void AnalyticsWrapper::flurryStartSession(const std::string& apiKey)
-{
-    JniMethodInfo minfo;
-    bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"Bridge", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
-    CCAssert(functionExist, "Function doesn't exist");
-    
-    jstring stringArg0 = minfo.env->NewStringUTF("flurryOnStartSession");
-    jstring stringArg1 = minfo.env->NewStringUTF(apiKey.c_str());
-    jstring stringArg2 = minfo.env->NewStringUTF("false");
-    
-    minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, stringArg0, stringArg1, stringArg2);
-    minfo.env->DeleteLocalRef(minfo.classID);
-    minfo.env->DeleteLocalRef(stringArg0);
-    minfo.env->DeleteLocalRef(stringArg1);
-    minfo.env->DeleteLocalRef(stringArg2);
-}
-
-std::string AnalyticsWrapper::flurryGetFlurryAgentVersion()
-{
-    JniMethodInfo minfo;
-    bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"flurryGetAgentVersion", "()I");
-    CCAssert(functionExist, "Function doesn't exist");
-    jint version =  minfo.env->CallStaticIntMethod(minfo.classID, minfo.methodID);
-    minfo.env->DeleteLocalRef(minfo.classID);
-    return std::to_string(version);
 }
 
 //GA methods
@@ -178,98 +151,34 @@ void AnalyticsWrapper::GAEndSession()
     minfo.env->DeleteLocalRef(minfo.classID);
 }
 
+void AnalyticsWrapper::firebaseLogPageView(const std::string& pageName){
 
-//Flurry methods
-void AnalyticsWrapper::flurrySetAppVersion(const std::string& version)
-{
     JniMethodInfo minfo;
-    bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"Bridge", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
+    bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"firebaseLogPageView", "(Ljava/lang/String;)V");
     CCAssert(functionExist, "Function doesn't exist");
-    
-    jstring stringArg0 = minfo.env->NewStringUTF("flurrySetAppVersion");
-    jstring stringArg1 = minfo.env->NewStringUTF(version.c_str());
-    jstring stringArg2 = minfo.env->NewStringUTF("false");
-    
-    minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, stringArg0, stringArg1, stringArg2);
+    jstring jPageName = minfo.env->NewStringUTF(pageName.c_str());
+    minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, jPageName);
     minfo.env->DeleteLocalRef(minfo.classID);
-    minfo.env->DeleteLocalRef(stringArg0);
-    minfo.env->DeleteLocalRef(stringArg1);
-    minfo.env->DeleteLocalRef(stringArg2);
+    minfo.env->DeleteLocalRef(jPageName);
 }
 
-void AnalyticsWrapper::flurrySetDebugLogEnabled(bool value)
-{
+void AnalyticsWrapper::firebaseLogEvent(const std::string& eventName) {
+
     JniMethodInfo minfo;
-    bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"Bridge", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
+    bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"firebaseLogEvent", "(Ljava/lang/String;)V");
     CCAssert(functionExist, "Function doesn't exist");
-    
-    jstring stringArg0 = minfo.env->NewStringUTF("flurrySetLogEnabled");
-    jstring stringArg1 = minfo.env->NewStringUTF("placeholder");
-    jstring stringArg2 = minfo.env->NewStringUTF(value ? "true" : "false");
-    minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, stringArg0, stringArg1, stringArg2);
+    jstring jPageName = minfo.env->NewStringUTF(eventName.c_str());
+    minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, jPageName);
     minfo.env->DeleteLocalRef(minfo.classID);
-    minfo.env->DeleteLocalRef(stringArg0);
-    minfo.env->DeleteLocalRef(stringArg1);
-    minfo.env->DeleteLocalRef(stringArg2);
+    minfo.env->DeleteLocalRef(jPageName);
 }
 
-void AnalyticsWrapper::flurrySetSecureTransportEnabled(bool value)
-{
-    JniMethodInfo minfo;
-    bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"Bridge", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
-    CCAssert(functionExist, "Function doesn't exist");
-    
-    jstring stringArg0 = minfo.env->NewStringUTF("flurrySetSecureEnabled");
-    jstring stringArg1 = minfo.env->NewStringUTF("placeholder");
-    jstring stringArg2 = minfo.env->NewStringUTF(value ? "true" : "false");
-    minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, stringArg0, stringArg1, stringArg2);
-    minfo.env->DeleteLocalRef(minfo.classID);
-    minfo.env->DeleteLocalRef(stringArg0);
-    minfo.env->DeleteLocalRef(stringArg1);
-    minfo.env->DeleteLocalRef(stringArg2);
-}
-
-void AnalyticsWrapper::flurryLogPageView()
-{
-    JniMethodInfo minfo;
-    bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"Bridge", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
-    CCAssert(functionExist, "Function doesn't exist");
-    
-    jstring stringArg0 = minfo.env->NewStringUTF("flurryLogPageView");
-    jstring stringArg1 = minfo.env->NewStringUTF("placeholder");
-    jstring stringArg2 = minfo.env->NewStringUTF("false");
-    
-    minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, stringArg0, stringArg1, stringArg2);
-    minfo.env->DeleteLocalRef(minfo.classID);
-    minfo.env->DeleteLocalRef(stringArg0);
-    minfo.env->DeleteLocalRef(stringArg1);
-    minfo.env->DeleteLocalRef(stringArg2);
-}
-
-void AnalyticsWrapper::flurryLogEvent(const std::string& eventName)
-{
-    JniMethodInfo minfo;
-    bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"Bridge", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
-    CCAssert(functionExist, "Function doesn't exist");
-    
-    jstring stringArg0 = minfo.env->NewStringUTF("flurryLogEvent");
-    jstring stringArg1 = minfo.env->NewStringUTF(eventName.c_str());
-    jstring stringArg2 = minfo.env->NewStringUTF("false");
-    
-    minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, stringArg0, stringArg1, stringArg2);
-    minfo.env->DeleteLocalRef(minfo.classID);
-    minfo.env->DeleteLocalRef(stringArg0);
-    minfo.env->DeleteLocalRef(stringArg1);
-    minfo.env->DeleteLocalRef(stringArg2);
-}
-
-void AnalyticsWrapper::flurryLogEventWithParameters(const std::string& eventName, CCDictionary * parameters)
-{
+void AnalyticsWrapper::firebaseLogEventWithParameters(const std::string& eventName, cocos2d::CCDictionary * parameters) {
     JniMethodInfo minfo;
     bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"Bridge", "(Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)V");
     CCAssert(functionExist, "Function doesn't exist");
-    
-    string eventNameString("flurryLogEventWithParameters,");
+
+    string eventNameString("firebaseLogEventWithParameters,");
     eventNameString += eventName;
     jstring stringArg0 = minfo.env->NewStringUTF(eventNameString.c_str());
     jstring stringArg2 = minfo.env->NewStringUTF("false");
@@ -278,83 +187,5 @@ void AnalyticsWrapper::flurryLogEventWithParameters(const std::string& eventName
     minfo.env->DeleteLocalRef(minfo.classID);
     minfo.env->DeleteLocalRef(stringArg0);
     minfo.env->DeleteLocalRef(array);
-    minfo.env->DeleteLocalRef(stringArg2);
-}
-
-void AnalyticsWrapper::flurryLogEventTimed(const std::string& eventName, bool timed)
-{
-    JniMethodInfo minfo;
-    bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"Bridge", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
-    CCAssert(functionExist, "Function doesn't exist");
-    
-    jstring stringArg0 = minfo.env->NewStringUTF("flurryLogEventTimed");
-    jstring stringArg1 = minfo.env->NewStringUTF(eventName.c_str());
-    jstring stringArg2 = minfo.env->NewStringUTF("false");
-    
-    if (timed == true)
-    {
-        stringArg2 = minfo.env->NewStringUTF("true");
-    }
-    
-    minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, stringArg0, stringArg1, stringArg2);
-    minfo.env->DeleteLocalRef(minfo.classID);
-    minfo.env->DeleteLocalRef(stringArg0);
-    minfo.env->DeleteLocalRef(stringArg1);
-    minfo.env->DeleteLocalRef(stringArg2);
-}
-
-void AnalyticsWrapper::flurryLogEventWithParametersTimed(const std::string& eventName, CCDictionary * parameters, bool timed)
-{
-    JniMethodInfo minfo;
-    bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"Bridge", "(Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)V");
-    CCAssert(functionExist, "Function doesn't exist");
-    
-    string eventNameString("flurryLogEventWithParametersTimed,");
-    eventNameString += eventName;
-    jstring stringArg0 = minfo.env->NewStringUTF(eventNameString.c_str());
-    jstring stringArg2 = minfo.env->NewStringUTF("false");
-    
-    if (timed == true)
-    {
-        stringArg2 = minfo.env->NewStringUTF("true");
-    }
-    jobjectArray array = jobjectArrayFromCCDictionary(minfo.env, parameters);
-    minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, stringArg0, array, stringArg2);
-    minfo.env->DeleteLocalRef(minfo.classID);
-    minfo.env->DeleteLocalRef(stringArg0);
-    minfo.env->DeleteLocalRef(array);
-    minfo.env->DeleteLocalRef(stringArg2);
-}
-
-void AnalyticsWrapper::flurryEndTimedEventWithParameters(const std::string& eventName, CCDictionary * parameters)
-{
-    JniMethodInfo minfo;
-    bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"Bridge", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
-    CCAssert(functionExist, "Function doesn't exist");
-    
-    jstring stringArg0 = minfo.env->NewStringUTF("flurryEndTimedEvent");
-    jstring stringArg1 = minfo.env->NewStringUTF(eventName.c_str());
-    jstring stringArg2 = minfo.env->NewStringUTF("false");
-    
-    minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, stringArg0, stringArg1, stringArg2);
-    minfo.env->DeleteLocalRef(minfo.classID);
-    minfo.env->DeleteLocalRef(stringArg0);
-    minfo.env->DeleteLocalRef(stringArg1);
-    minfo.env->DeleteLocalRef(stringArg2);
-}
-void AnalyticsWrapper::flurryEndSession()
-{
-    JniMethodInfo minfo;
-    bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"Bridge", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
-    CCAssert(functionExist, "Function doesn't exist");
-    
-    jstring stringArg0 = minfo.env->NewStringUTF("flurryOnEndSession");
-    jstring stringArg1 = minfo.env->NewStringUTF("placeholder");
-    jstring stringArg2 = minfo.env->NewStringUTF("false");
-    
-    minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, stringArg0, stringArg1, stringArg2);
-    minfo.env->DeleteLocalRef(minfo.classID);
-    minfo.env->DeleteLocalRef(stringArg0);
-    minfo.env->DeleteLocalRef(stringArg1);
     minfo.env->DeleteLocalRef(stringArg2);
 }

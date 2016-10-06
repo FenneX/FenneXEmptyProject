@@ -25,11 +25,11 @@
  ****************************************************************************///
 
 #include "AnalyticsWrapper.h"
-#import "Flurry.h"
 #import "AnalyticXStringUtil.h"
 #import "GAI.h"
 #import "GAIFields.h"
 #import "GAIDictionaryBuilder.h"
+#import "Firebase.h"
 
 //Start and get agent methods
 void AnalyticsWrapper::GAStartSession(const std::string& apiKey)
@@ -45,15 +45,6 @@ void AnalyticsWrapper::GAStartSession(const std::string& apiKey)
 std::string AnalyticsWrapper::GAGetGAAgentVersion()
 {
     return [kGAIVersion UTF8String];
-}
-
-void AnalyticsWrapper::flurryStartSession(const std::string& apiKey) {
-    [Flurry startSession:[AnalyticXStringUtil nsstringFromCString:apiKey.c_str()]];
-}
-
-std::string AnalyticsWrapper::flurryGetFlurryAgentVersion() {
-    NSString *versionString = [Flurry getFlurryAgentVersion];
-    return [AnalyticXStringUtil cstringFromNSString:versionString];
 }
 
 //GA methods
@@ -99,45 +90,14 @@ void AnalyticsWrapper::GAEndSession()
     [[[GAI sharedInstance] defaultTracker] set:kGAISessionControl value:@"end"];
 }
 
-
-//Flurry methods
-void AnalyticsWrapper::flurrySetAppVersion(const std::string& version) {
-    NSString *versionString = [AnalyticXStringUtil nsstringFromCString:version.c_str()];
-    [Flurry setAppVersion:versionString];
+void AnalyticsWrapper::firebaseLogPageView(const std::string& pageName){
+    firebaseLogEventWithParameters("change_scene", DcreateP(Screate(pageName), Screate("item_name"),NULL));
 }
 
-void AnalyticsWrapper::flurrySetDebugLogEnabled(bool value) {
-    [Flurry setDebugLogEnabled:value];
+void AnalyticsWrapper::firebaseLogEvent(const std::string& eventName) {
+    firebaseLogEventWithParameters(eventName, Dcreate());
 }
 
-void AnalyticsWrapper::flurrySetSecureTransportEnabled(bool value) {
-    [Flurry setSecureTransportEnabled:value];
-}
-
-void AnalyticsWrapper::flurryLogPageView() {
-    [Flurry logPageView];
-}
-
-void AnalyticsWrapper::flurryLogEvent(const std::string& eventName) {
-    [Flurry logEvent:[AnalyticXStringUtil nsstringFromCString:eventName.c_str()]];
-}
-
-void AnalyticsWrapper::flurryLogEventWithParameters(const std::string& eventName, cocos2d::CCDictionary * parameters) {
-    
-    [Flurry logEvent:[AnalyticXStringUtil nsstringFromCString:eventName.c_str()] withParameters:[AnalyticXStringUtil nsDictionaryFromCCDictionary:parameters]];
-}
-
-void AnalyticsWrapper::flurryLogEventTimed(const std::string& eventName, bool timed) {
-    [Flurry logEvent:[AnalyticXStringUtil nsstringFromCString:eventName.c_str()] timed:timed];
-}
-
-void AnalyticsWrapper::flurryLogEventWithParametersTimed(const std::string& eventName, cocos2d::CCDictionary * parameters, bool timed) {
-    [Flurry logEvent:[AnalyticXStringUtil nsstringFromCString:eventName.c_str()] withParameters:[AnalyticXStringUtil nsDictionaryFromCCDictionary:parameters] timed:timed];
-}
-
-void AnalyticsWrapper::flurryEndTimedEventWithParameters(const std::string& eventName, cocos2d::CCDictionary * parameters) {
-    [Flurry endTimedEvent:[AnalyticXStringUtil nsstringFromCString:eventName.c_str()] withParameters:[AnalyticXStringUtil nsDictionaryFromCCDictionary:parameters]];
-}
-void AnalyticsWrapper::flurryEndSession() {
-    //Android only
+void AnalyticsWrapper::firebaseLogEventWithParameters(const std::string& eventName, cocos2d::CCDictionary * parameters) {
+    [FIRAnalytics logEventWithName:[AnalyticXStringUtil nsstringFromCString:eventName.c_str()] parameters:[AnalyticXStringUtil nsDictionaryFromCCDictionary:parameters]];
 }

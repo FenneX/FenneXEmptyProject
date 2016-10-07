@@ -30,10 +30,7 @@
 
 #define FIRST_SCENE Home
 
-//To use the testflight SDK, enter a token
-//#define TESTFLIGHT_TOKEN @""
-
-//Debug analytics have a different ID and are on a separate app on Flurry. Put at 0 for release
+//Debug analytics have a different ID and are on a separate app. Put at 0 for release
 #define DEBUG_ANALYTICS 1
 
 //Display stats about performance in the lower left corner : fps, number of cocos objects and time for a frame. Put at false for release
@@ -70,7 +67,8 @@
 //Log localization queries. Useful when translating
 #define VERBOSE_LOCALIZATION 0
 
-//Log analytics (Flurry). Useful when it's not working properly
+//Log analytics (GA). Useful when it's not working properly
+// if you want to add log for firebase in iOS, add the argument "-FIRAnalyticsDebugEnabled" in the "Run" part of your scheme in XCode
 #define VERBOSE_ANALYTICS 0
 
 //Log some performance time. Useful to detect bottlenecks when the app is too slow

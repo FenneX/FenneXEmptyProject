@@ -65,26 +65,22 @@ void AppDelegate::loadAnalytics()
 #if DEBUG_ANALYTICS
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
     AnalyticsWrapper::GAStartSession("YOUR-GA-KEY");
-    AnalyticsWrapper::flurryStartSession("YOUR-FLURRY-KEY");
-    CCLOG("start flurry iOS debug session");
+    CCLOG("start GA iOS debug session");
 #endif
     
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
     AnalyticsWrapper::GAStartSession("YOUR-GA-KEY");
-    AnalyticsWrapper::flurryStartSession("YOUR-FLURRY-KEY");
-    CCLOG("start flurry Android debug session");
+    CCLOG("start GA Android debug session");
 #endif
 #else
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
     AnalyticsWrapper::GAStartSession("YOUR-GA-KEY");
-    AnalyticsWrapper::flurryStartSession("YOUR-FLURRY-KEY");
-    CCLOG("start flurry iOS release session");
+    CCLOG("start GA iOS release session");
 #endif
     
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
     AnalyticsWrapper::GAStartSession("YOUR-GA-KEY");
-    AnalyticsWrapper::flurryStartSession("YOUR-FLURRY-KEY");
-    CCLOG("start flurry Android release session");
+    CCLOG("start GA Android release session");
 #endif
 #endif
     AnalyticsWrapper::setDebugLogEnabled(VERBOSE_ANALYTICS);
@@ -193,7 +189,7 @@ void AppDelegate::applicationDidEnterBackground()
     CCDirector::sharedDirector()->stopAnimation();
     Director::getInstance()->getEventDispatcher()->dispatchCustomEvent("AppEnterBackground");
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
-    CCLOG("Stopping flurry session on enter background");
+    CCLOG("Stopping GA session on enter background");
     AnalyticsWrapper::endSession();
 #endif
     // if you use SimpleAudioEngine, it must be pause
@@ -206,7 +202,7 @@ void AppDelegate::applicationWillEnterForeground()
     CCDirector::sharedDirector()->startAnimation();
 
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
-    CCLOG("Starting flurry session on enter foreground");
+    CCLOG("Starting GA session on enter foreground");
     loadAnalytics();
 #endif
     // if you use SimpleAudioEngine, it must resume here

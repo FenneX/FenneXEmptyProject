@@ -25,11 +25,10 @@ package com.fennex.emptyproject;
 
 import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
 
 import com.fennex.modules.ActivityResultNotifier;
-import com.diwublog.AnalyticX.AnalyticXBridge;
-import com.flurry.android.FlurryAgent;
+import com.fennex.modules.Analytics;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.fennex.emptyproject.R;
 
 public class EmptyProject extends ActivityResultNotifier {
@@ -61,8 +60,8 @@ public class EmptyProject extends ActivityResultNotifier {
 	
 	protected void onCreate(Bundle savedInstanceState){
 		super.onCreate(savedInstanceState);
-		AnalyticXBridge.sessionContext = this.getApplicationContext();
     	instance = this;
+		Analytics.mFirebaseAnalytics =  FirebaseAnalytics.getInstance(this);
 	}
 
     //Tell InAppWrapper if a particular productID is a consumable
@@ -74,11 +73,11 @@ public class EmptyProject extends ActivityResultNotifier {
 
 	@Override
 	public int getSplashScreenLayout() {
-		return 0;
+		return -1;
 	}
 
 	@Override
 	public int getSplashScreenImageID() {
-		return 0;
+		return -1;
 	}
 }

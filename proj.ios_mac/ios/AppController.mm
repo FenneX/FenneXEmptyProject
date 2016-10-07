@@ -169,7 +169,8 @@ void uncaughtExceptionHandler(NSException *exception)
     // IMPORTANT: Setting the GLView should be done after creating the RootViewController
     cocos2d::GLView *glview = cocos2d::GLViewImpl::createWithEAGLView(eaglView);
     cocos2d::Director::getInstance()->setOpenGLView(glview);
-    [FIRApp configure];
+    // Uncomment this line if you want to use firebase and you have your GoogleService-Info.plist ready
+    //[FIRApp configure];
     cocos2d::Application::getInstance()->run();
     
     NSLog(@"app launch");

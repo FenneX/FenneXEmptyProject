@@ -72,7 +72,7 @@ void EventResponder::quitApp(EventCustom* event)
 {
     CCLOG("Quitting application");
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
-    CCLOG("Stopping flurry session on enter background");
+    CCLOG("Stopping GA session on enter background");
     AnalyticsWrapper::endSession();
 #endif
     CCDirector::sharedDirector()->end();

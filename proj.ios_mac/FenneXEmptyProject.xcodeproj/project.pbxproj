@@ -1131,6 +1131,7 @@
 				INFOPLIST_FILE = "ios/FenneXEmptyProject-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 5.0;
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/ios/Analytics/GAILib";
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "FenneXEmptyProject iOS";
 				PROVISIONING_PROFILE = "";
 				SDKROOT = iphoneos;
@@ -1170,6 +1171,7 @@
 				INFOPLIST_FILE = "ios/FenneXEmptyProject-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 5.0;
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/ios/Analytics/GAILib";
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "FenneXEmptyProject iOS";
 				PROVISIONING_PROFILE = "";
 				SDKROOT = iphoneos;

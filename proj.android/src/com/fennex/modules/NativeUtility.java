@@ -33,6 +33,7 @@ import java.io.InputStream;
 
 import android.annotation.TargetApi;
 import android.app.ActivityManager;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.content.res.Configuration;
@@ -85,6 +86,18 @@ public class NativeUtility
     	Log.d(TAG, "returning local path : " + localPath);
     	return localPath;
     }
+
+    public static String getOpenUrl()
+    {
+        String openUrl = getMainActivity().getIntent().getDataString();
+        if(openUrl == null)
+        {
+            openUrl = "";
+        }
+        Log.d(TAG, "returning openUrl: " + openUrl);
+        return openUrl;
+    }
+    public static native void notifyUrlOpened(String url);
     
     public static String getAppName()
     {
@@ -341,5 +354,22 @@ public class NativeUtility
             return false;
         }
         return true;
+    }
+
+    public static int getApplicationVersion(String packageName)
+    {
+        Context myContext = NativeUtility.getMainActivity().getBaseContext();
+        PackageManager myPackageMgr = myContext.getPackageManager();
+        int version = -1;
+        try
+        {
+            PackageInfo pInfo = myPackageMgr.getPackageInfo(packageName, 0);
+            version = pInfo.versionCode;
+        }
+        catch (PackageManager.NameNotFoundException e) {
+
+        }
+
+        return version;
     }
 }

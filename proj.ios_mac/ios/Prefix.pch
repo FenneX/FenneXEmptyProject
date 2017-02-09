@@ -5,4 +5,12 @@
 #ifdef __OBJC__
     #import <Foundation/Foundation.h>
     #import <UIKit/UIKit.h>
+#else
+    #include "cocos2d.h"
+    #include "Shorteners.h"
+    #include "FenneX.h"
+    #include "FenneXCore.h"
+    #include "FenneXMacros.h"
+    #include "FenneXWrappers.h"
+    #include "AppMacros.h"
 #endif

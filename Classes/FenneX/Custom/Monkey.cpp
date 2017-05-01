@@ -55,7 +55,13 @@ void Monkey::update(float delta)
             state = Random;
         }
     }
-    CCArray* buttons = GraphicLayer::sharedLayer()->allActionnableObjects();
+    CCArray* buttons = GraphicLayer::sharedLayer()->allObjects([](RawObject* obj) -> bool {
+        return obj->getNode() != NULL &&
+            GraphicLayer::sharedLayer()->isWorldVisible(obj) &&
+            !obj->getEventName().empty() &&
+            obj->getEventName()[0] != '\0' &&
+            obj->getEventActivated();
+    });
     this->removeBadButtons(buttons);
     CCArray* probableTargets = NULL;
     if(state == SearchScenes)

@@ -30,6 +30,7 @@
 		5087E76B17EB910900C73F5D /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D44C620F132DFF4E0009C878 /* AudioToolbox.framework */; };
 		5087E78917EB974C00C73F5D /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5087E78817EB974C00C73F5D /* AppKit.framework */; };
 		5087E78B17EB975400C73F5D /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5087E78A17EB975400C73F5D /* OpenGL.framework */; };
+		6A1B38D91EBE20E800FCE610 /* ValueConversion.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6A1B38D71EBE20E800FCE610 /* ValueConversion.cpp */; };
 		6A35C943199D074A009A2D9C /* AnalyticsWrapperImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 6A35C908199D074A009A2D9C /* AnalyticsWrapperImpl.mm */; };
 		6A35C944199D074A009A2D9C /* AnalyticXStringUtil.mm in Sources */ = {isa = PBXBuildFile; fileRef = 6A35C90A199D074A009A2D9C /* AnalyticXStringUtil.mm */; };
 		6A35C946199D074A009A2D9C /* libGoogleAnalyticsServices.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 6A35C915199D074A009A2D9C /* libGoogleAnalyticsServices.a */; };
@@ -187,6 +188,8 @@
 		5087E76F17EB910900C73F5D /* FenneXEmptyProject Mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "FenneXEmptyProject Mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5087E78817EB974C00C73F5D /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		5087E78A17EB975400C73F5D /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		6A1B38D71EBE20E800FCE610 /* ValueConversion.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ValueConversion.cpp; sourceTree = "<group>"; };
+		6A1B38D81EBE20E800FCE610 /* ValueConversion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ValueConversion.h; sourceTree = "<group>"; };
 		6A35C908199D074A009A2D9C /* AnalyticsWrapperImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AnalyticsWrapperImpl.mm; sourceTree = "<group>"; };
 		6A35C909199D074A009A2D9C /* AnalyticXStringUtil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AnalyticXStringUtil.h; sourceTree = "<group>"; };
 		6A35C90A199D074A009A2D9C /* AnalyticXStringUtil.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AnalyticXStringUtil.mm; sourceTree = "<group>"; };
@@ -287,7 +290,6 @@
 		6A35C9AE199D07BE009A2D9C /* SceneSwitcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SceneSwitcher.h; sourceTree = "<group>"; };
 		6A35C9B0199D07BE009A2D9C /* Localization.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Localization.cpp; sourceTree = "<group>"; };
 		6A35C9B1199D07BE009A2D9C /* Localization.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Localization.h; sourceTree = "<group>"; };
-		6A35C9B2199D07BE009A2D9C /* Logs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Logs.h; sourceTree = "<group>"; };
 		6A35C9B3199D07BE009A2D9C /* Pausable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Pausable.h; sourceTree = "<group>"; };
 		6A35C9B4199D07BE009A2D9C /* PListPersist.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PListPersist.cpp; sourceTree = "<group>"; };
 		6A35C9B5199D07BE009A2D9C /* PListPersist.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PListPersist.h; sourceTree = "<group>"; };
@@ -795,11 +797,12 @@
 		6A35C9AF199D07BE009A2D9C /* Utility */ = {
 			isa = PBXGroup;
 			children = (
+				6A1B38D71EBE20E800FCE610 /* ValueConversion.cpp */,
+				6A1B38D81EBE20E800FCE610 /* ValueConversion.h */,
 				6A8BA9681AA76C41002E97E0 /* DelayedDispatcher.cpp */,
 				6A8BA9691AA76C41002E97E0 /* DelayedDispatcher.h */,
 				6A35C9B0199D07BE009A2D9C /* Localization.cpp */,
 				6A35C9B1199D07BE009A2D9C /* Localization.h */,
-				6A35C9B2199D07BE009A2D9C /* Logs.h */,
 				6A35C9B3199D07BE009A2D9C /* Pausable.h */,
 				6A35C9B4199D07BE009A2D9C /* PListPersist.cpp */,
 				6A35C9B5199D07BE009A2D9C /* PListPersist.h */,
@@ -1039,6 +1042,7 @@
 				6A35CA3A199D07BE009A2D9C /* pugixml.cpp in Sources */,
 				1AFAF8B716D35DE700DB1158 /* AppDelegate.cpp in Sources */,
 				6A35C956199D074A009A2D9C /* Reachability.m in Sources */,
+				6A1B38D91EBE20E800FCE610 /* ValueConversion.cpp in Sources */,
 				6A35CA1F199D07BE009A2D9C /* CustomBaseNode.cpp in Sources */,
 				6A35C94A199D074A009A2D9C /* NSFileManager+ApplicationSupport.mm in Sources */,
 				6A35CA2A199D07BE009A2D9C /* SelectionRecognizer.cpp in Sources */,

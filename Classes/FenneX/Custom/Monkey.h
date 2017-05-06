@@ -42,7 +42,7 @@ typedef enum
 
 USING_NS_FENNEX;
 
-class Monkey : public CCObject, public Pausable
+class Monkey : public Ref, public Pausable
 {
 public:
     static Monkey* excitedMonkey(void);

@@ -70,12 +70,12 @@ void EventResponder::back(EventCustom* event)
 
 void EventResponder::quitApp(EventCustom* event)
 {
-    CCLOG("Quitting application");
+    log("Quitting application");
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
-    CCLOG("Stopping GA session on enter background");
+    log("Stopping GA session on enter background");
     AnalyticsWrapper::endSession();
 #endif
-    CCDirector::sharedDirector()->end();
+    Director::getInstance()->end();
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
     exit(0);
 #endif

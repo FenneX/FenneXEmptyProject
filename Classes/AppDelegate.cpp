@@ -53,34 +53,28 @@ void AppDelegate::initGLContextAttrs()
 
 void AppDelegate::loadAnalytics()
 {
-#if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
     AnalyticsWrapper::setAppVersion("0.1");
-    CCLOG("Set iOS app version");
-#endif
-#if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
-    AnalyticsWrapper::setAppVersion("0.1");
-    CCLOG("Set Android app version");
-#endif
+    log("Set app version");
     
 #if DEBUG_ANALYTICS
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
     AnalyticsWrapper::GAStartSession("YOUR-GA-KEY");
-    CCLOG("start GA iOS debug session");
+    log("start GA iOS debug session");
 #endif
     
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
     AnalyticsWrapper::GAStartSession("YOUR-GA-KEY");
-    CCLOG("start GA Android debug session");
+    log("start GA Android debug session");
 #endif
 #else
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
     AnalyticsWrapper::GAStartSession("YOUR-GA-KEY");
-    CCLOG("start GA iOS release session");
+    log("start GA iOS release session");
 #endif
     
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
     AnalyticsWrapper::GAStartSession("YOUR-GA-KEY");
-    CCLOG("start GA Android release session");
+    log("start GA Android release session");
 #endif
 #endif
     AnalyticsWrapper::setDebugLogEnabled(VERBOSE_ANALYTICS);
@@ -91,7 +85,7 @@ void AppDelegate::initAppModules()
     //The scene switcher have to be initialized BEFORE most things (to get PlanSceneSwitch event before)
     SceneSwitcher::sharedSwitcher();
     //Disable pop up notify for fail (for example at resume, it will try to load some delete assets if you remove a custom photo
-    CCFileUtils::sharedFileUtils()->setPopupNotify(false);
+    FileUtils::getInstance()->setPopupNotify(false);
     
 	CCDictionary* settings = (CCDictionary*)loadObjectFromFile("last_settings.plist");
 	bool firstLaunch = settings == NULL || !isKindOfClass(settings->objectForKey("FirstLaunch"), CCBool) || TOBOOL(settings->objectForKey("FirstLaunch"));
@@ -102,7 +96,7 @@ void AppDelegate::initAppModules()
 		{
 			settings = Dcreate();
 		}
-		CCLOG("%s", language->getCString());
+		log("%s", language->getCString());
 		AnalyticsWrapper::logEvent(language->getCString());
 		settings->setObject(Screate(getLocalLanguage()), "Language");
 		settings->setObject(Bcreate(false), "FirstLaunch");
@@ -110,7 +104,7 @@ void AppDelegate::initAppModules()
 	else if(getLocalLanguage() != TOCSTRING(settings->objectForKey("Language")))
 	{
 		CCString* language = ScreateF("Change to language: %s, previous language: %s", getLocalLanguage().c_str(), TOCSTRING(settings->objectForKey("Language")));
-		CCLOG("%s", language->getCString());
+		log("%s", language->getCString());
 		AnalyticsWrapper::logEvent(language->getCString());
 		settings->setObject(Screate(getLocalLanguage()), "Language");
 	}
@@ -125,12 +119,12 @@ bool AppDelegate::applicationDidFinishLaunching()
 	vector<string> searchPath;
 
 	loadAnalytics();
-    CCDirector* pDirector = CCDirector::sharedDirector();
-    CCEGLView* pEGLView = CCDirector::sharedDirector()->getOpenGLView();
+    Director* pDirector = Director::getInstance();
+    GLView* pEGLView = Director::getInstance()->getOpenGLView();
 
     pDirector->setOpenGLView(pEGLView);
     
-	CCSize frameSize = pEGLView->getFrameSize();
+	Size frameSize = pEGLView->getFrameSize();
     // Set the design resolution
     pEGLView->setDesignResolutionSize(frameSize.width, frameSize.height, kResolutionShowAll);
 
@@ -157,10 +151,10 @@ bool AppDelegate::applicationDidFinishLaunching()
         CCBReader::setResolutionScale(1/MAX(smallResource.size.width/frameSize.width, smallResource.size.height/frameSize.height));
         CCBLoaderSetScale(MIN(smallResource.size.width/designResolutionSize.width, smallResource.size.height/designResolutionSize.height));
     }
-	CCFileUtils::sharedFileUtils()->setSearchPaths(searchPath);
+	FileUtils::getInstance()->setSearchPaths(searchPath);
     //If it's a phone, CCBLoader will automatically try to load ccb finishing by -phone first
     CCBLoaderSetPhoneLayout(isPhone());
-    CCLog("Scale factor for director : %f, for CCBReader : %f, resolution : %f, %f, resource directory : %s", pDirector->getContentScaleFactor(), CCBReader::getResolutionScale(), frameSize.width, frameSize.height, searchPath[0].c_str());
+    log("Scale factor for director : %f, for CCBReader : %f, resolution : %f, %f, resource directory : %s", pDirector->getContentScaleFactor(), CCBReader::getResolutionScale(), frameSize.width, frameSize.height, searchPath[0].c_str());
 	
     // turn on display FPS
 #ifdef BUILD_VERSION
@@ -186,10 +180,10 @@ bool AppDelegate::applicationDidFinishLaunching()
 // This function will be called when the app is inactive. When comes a phone call,it's be invoked too
 void AppDelegate::applicationDidEnterBackground()
 {
-    CCDirector::sharedDirector()->stopAnimation();
+    Director::getInstance()->stopAnimation();
     Director::getInstance()->getEventDispatcher()->dispatchCustomEvent("AppEnterBackground");
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
-    CCLOG("Stopping GA session on enter background");
+    log("Stopping GA session on enter background");
     AnalyticsWrapper::endSession();
 #endif
     // if you use SimpleAudioEngine, it must be pause
@@ -199,10 +193,10 @@ void AppDelegate::applicationDidEnterBackground()
 // this function will be called when the app is active again
 void AppDelegate::applicationWillEnterForeground()
 {
-    CCDirector::sharedDirector()->startAnimation();
+    Director::getInstance()->startAnimation();
 
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
-    CCLOG("Starting GA session on enter foreground");
+    log("Starting GA session on enter foreground");
     loadAnalytics();
 #endif
     // if you use SimpleAudioEngine, it must resume here
@@ -211,9 +205,9 @@ void AppDelegate::applicationWillEnterForeground()
 
 void AppDelegate::applicationDidReceiveMemoryWarning()
 {
-    CCLOG("Removing unused textures ...");
-    CCTextureCache::sharedTextureCache()->removeUnusedTextures();
-    CCLOG("Unused textures removed!");
+    log("Removing unused textures ...");
+    Director::getInstance()->getTextureCache()->removeUnusedTextures();
+    log("Unused textures removed!");
     /*
      Free up as much memory as possible by purging cached data objects that can be recreated (or reloaded from disk) later.
      */

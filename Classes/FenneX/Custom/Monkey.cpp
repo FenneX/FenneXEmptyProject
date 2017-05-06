@@ -105,14 +105,14 @@ void Monkey::init()
 
 void Monkey::removeBadButtons(CCArray* buttons)
 {
-    CCRect windowRect = CCRectMake(0, 0, CCDirector::sharedDirector()->getWinSize().width, CCDirector::sharedDirector()->getWinSize().height);
+    Rect windowRect = Rect(0, 0, Director::getInstance()->getWinSize().width, Director::getInstance()->getWinSize().height);
     GraphicLayer* layer = GraphicLayer::sharedLayer();
     for(int i = buttons->count() - 1; i >= 0; i--)
     {
         RawObject* obj = (RawObject*)buttons->objectAtIndex(i);
-        //Remove objects which don't collide with windowRect. It uses code from CCRect::intersectRect (which can't be used directly because a CCRect origin must be > (0,0))
-        CCPoint pos = layer->getRealPosition(obj);
-        CCSize size = SizeMult(obj->getSize(), layer->getRealScale(obj));
+        //Remove objects which don't collide with windowRect. It uses code from Rect::intersectRect (which can't be used directly because a Rect origin must be > (0,0))
+        Vec2 pos = layer->getRealPosition(obj);
+        Size size = SizeMult(obj->getSize(), layer->getRealScale(obj));
         if(windowRect.getMaxX() < pos.x - obj->getNode()->getAnchorPoint().x * size.width ||
            pos.x + (1-obj->getNode()->getAnchorPoint().x) * size.width <      windowRect.getMinX() ||
            windowRect.getMaxY() < pos.y - obj->getNode()->getAnchorPoint().y * size.height ||

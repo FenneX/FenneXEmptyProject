@@ -40,7 +40,7 @@ void LayoutHandler::createSceneGraphics(Scene* target)
     timeval startTime;
     gettimeofday(&startTime, NULL);
 #endif
-	CCLOG("Starting scene creation");
+	log("Starting scene creation");
     
     //Stop sound and all delayed play sound
     AudioPlayerRecorder::sharedRecorder()->stopPlaying();
@@ -68,7 +68,7 @@ void LayoutHandler::createSceneGraphics(Scene* target)
 #if VERBOSE_PERFORMANCE_TIME
     timeval endTime;
     gettimeofday(&endTime, NULL);
-    CCLog("Scene %s loaded in %f ms", formatSceneToString(target->getSceneName()), getTimeDifferenceMS(startTime, endTime));
+    log("Scene %s loaded in %f ms", formatSceneToString(target->getSceneName()), getTimeDifferenceMS(startTime, endTime));
 #endif
 }
 

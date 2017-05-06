@@ -35,7 +35,7 @@
 USING_NS_CC;
 USING_NS_FENNEX;
 
-void startVideoRecordPreview(CCPoint position, CCSize size)
+void startVideoRecordPreview(Vec2 position, cocos2d::Size size)
 {
     [[VideoRecorder sharedRecorder] setPreviewPosition:CGPointMake(position.x, position.y) size:CGSizeMake(size.width, size.height)];
     [[VideoRecorder sharedRecorder] startPreview];
@@ -61,16 +61,19 @@ bool cancelRecording(bool notify)
     return [[VideoRecorder sharedRecorder] cancelRecording:notify];
 }
 
-bool pickVideoFromLibrary()
+bool pickVideoFromLibrary(const std::string& saveName)
 {
     if([AppController sharedController] != NULL)
     {
         [[VideoPicker sharedPicker] initController];
+        [VideoPicker sharedPicker].saveName = [NSString stringWithFormat:@"%s", saveName.c_str()];
         [[VideoPicker sharedPicker] setSourceType:UIImagePickerControllerSourceTypePhotoLibrary];
+        [VideoPicker sharedPicker].useCamera = false;
         if([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad)
         {
             UIPopoverController *popover = [[UIPopoverController alloc] initWithContentViewController:[VideoPicker sharedPicker].controller];
-            CGRect rect = [AppController sharedController].window.frame;
+            //Tested on iPad retina and not retina, will show the popover on the bottom right corner with an Arrow Up.
+            CGRect rect = CGRectMake(0, 0, 2048, 250);
             if(UIInterfaceOrientationIsPortrait([[UIApplication sharedApplication] statusBarOrientation]))
             {
                 rect.size.width /= 2;
@@ -80,11 +83,22 @@ bool pickVideoFromLibrary()
         }
         else
         {
-            [[VideoPicker sharedPicker] initController];
-            [[VideoPicker sharedPicker] setSourceType:UIImagePickerControllerSourceTypePhotoLibrary];
-            
             [[AppController sharedController].viewController presentModalViewController:[VideoPicker sharedPicker].controller animated:YES];
         }
+        return true;
+    }
+    return false;
+}
+
+bool pickVideoFromCamera(const std::string& saveName)
+{
+    if([AppController sharedController] != NULL)
+    {
+        [[VideoPicker sharedPicker] initController];
+        [VideoPicker sharedPicker].saveName = [NSString stringWithFormat:@"%s", saveName.c_str()];
+        [[VideoPicker sharedPicker] setSourceType:UIImagePickerControllerSourceTypeCamera];
+        [VideoPicker sharedPicker].useCamera = true;
+        [[AppController sharedController].viewController presentModalViewController:[VideoPicker sharedPicker].controller animated:YES];
         return true;
     }
     return false;
@@ -156,6 +170,9 @@ void getAllVideos()
 
 @synthesize controller;
 @synthesize popOver;
+@synthesize saveName;
+@synthesize useCamera;
+
 static VideoPicker* _sharedPicker = nil;
 
 + (VideoPicker*) sharedPicker
@@ -215,19 +232,24 @@ static VideoPicker* _sharedPicker = nil;
     if (CFStringCompare ((CFStringRef) mediaType, kUTTypeMovie, 0) == kCFCompareEqualTo)
     {
         NSURL* videoURL = (NSURL *) [info objectForKey:UIImagePickerControllerMediaURL];
-        ALAssetsLibraryAssetForURLResultBlock resultblock = ^(ALAsset *myasset)
-        {
-            ALAssetRepresentation *representation = [myasset defaultRepresentation];
-            NSString *fileName = [representation filename];
-            notifyVideoName([[videoURL path] UTF8String], [fileName UTF8String]);
-        };
-        //Warning : the MediaURL is the path to the readable file (which may have been compressed)
-        //while ReferenceURL is the original AssetsLibrary path (can't be read directly)
-        ALAssetsLibrary* assetslibrary = [[[ALAssetsLibrary alloc] init] autorelease];
-        [assetslibrary assetForURL:(NSURL *) [info objectForKey:UIImagePickerControllerReferenceURL]
-                       resultBlock:resultblock
-                      failureBlock:nil];
-        notifyVideoPicked([[videoURL path] UTF8String]);
+        
+        // Copy file into the app
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        NSError *error;
+        NSString* fileName = [NSString stringWithFormat:@"%@/Documents/%@.%@", [NSString stringWithUTF8String:getenv("HOME")], saveName, [videoURL pathExtension]];
+        self.saveName = [NSString stringWithFormat:@"%@.%@", saveName, [videoURL pathExtension]];
+        if ([fileManager fileExistsAtPath:[videoURL path]] == YES) {
+            if(useCamera)
+            {// It's useless to keep a tmp video
+                [fileManager moveItemAtPath:[videoURL path] toPath:fileName error:&error];
+            }
+            else
+            {
+                [fileManager copyItemAtPath:[videoURL path] toPath:fileName error:&error];
+            }
+        }
+        
+        notifyVideoPicked([saveName UTF8String]);
         [controller release];
         controller = nil;
     }
@@ -246,6 +268,7 @@ static VideoPicker* _sharedPicker = nil;
     {
         [popOver dismissPopoverAnimated:YES];
     }
+    notifyVideoPickCancelled();
 }
 
 @end

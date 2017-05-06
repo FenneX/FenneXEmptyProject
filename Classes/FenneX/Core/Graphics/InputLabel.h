@@ -43,17 +43,19 @@ public:
     
     cocos2d::Rect getBoundingBox();
     virtual void setPlaceHolderColor(Color3B color);
-    virtual const char* getLabelValue();
-    virtual void setLabelValue(const char* value);
+    virtual Color3B getPlaceHolderColor();
+    virtual void setFontColor(Color3B color);
+    virtual Color3B getFontColor();
+    virtual void setPlaceHolder(std::string value);
+    virtual std::string getLabelValue();
+    virtual void setLabelValue(std::string value);
     virtual Node* getNode();
     
     InputLabel();
     InputLabel(ui::Scale9Sprite* sprite);
-    InputLabel(const char* placeHolder, const char* fontName, int fontSize, Vec2 location, ui::EditBox::InputMode inputMode = ui::EditBox::InputMode::ANY, int maxChar = -1, cocos2d::Size dimensions = cocos2d::Size(0,0), TextHAlignment format = TextHAlignment::CENTER);
     //TODO : add keyboard type and max char
     ~InputLabel();
     
-    virtual void update(float deltaTime);
     /*
      virtual bool onTextFieldInsertText(CCTextFieldTTF * sender, const char * text, int nLen);
      virtual bool onTextFieldDeleteBackward(CCTextFieldTTF * sender, const char * delText, int nLen);
@@ -70,9 +72,6 @@ public:
     virtual void editBoxReturn(ui::EditBox* editBox);
     virtual void editBoxEditingDidEnd(ui::EditBox* editBox);
     virtual void editBoxTextChanged(ui::EditBox* editBox, const std::string& text);
-    
-    
-    bool numbersOnly; //false by default
     
     bool isUnedited();
     void setInitialText(const std::string& text);
@@ -93,7 +92,6 @@ public:
 protected:
     ui::EditBox* delegate;
     bool isOpened;
-    bool textDirty;
     
     std::string initialText; //Used to know if the current text is the placeholder
     /*

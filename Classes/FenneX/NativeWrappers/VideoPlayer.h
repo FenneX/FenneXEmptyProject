@@ -45,6 +45,7 @@ public:
     //It also support more formats
     static void setUseVLC(bool useVLC);
 #endif
+    void setPlayerPosition(Vec2 position, cocos2d::Size size);
     void play();
     void pause();
     void stop();
@@ -62,6 +63,10 @@ public:
     //Return the path of the thumbnail (use getLocalPath to get the absolute path)
     //May return NULL if there was a problem generating the thumbnail
     static std::string getThumbnail(const std::string& path);
+    
+    //Return the size of the video
+    //May return (0,0) if there was a problem with the video
+    static cocos2d::Size getVideoSize(const std::string& path);
     
     //TODO : Add iOS implementation
     static bool isValidVideo(const std::string& filePath);

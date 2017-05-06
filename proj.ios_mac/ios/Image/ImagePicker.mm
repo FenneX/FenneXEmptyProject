@@ -34,7 +34,7 @@ USING_NS_FENNEX;
 
 bool pickImageFrom(const std::string& saveName, PickOption pickOption, int width, int height, const std::string& identifier, bool rescale, float thumbnailScale)
 {
-    CCDirector::sharedDirector()->stopAnimation();
+    Director::getInstance()->stopAnimation();
     [ImagePicker sharedPicker].saveName = [NSString stringWithFormat:@"%s", saveName.c_str()];
     [ImagePicker sharedPicker].identifier = [NSString stringWithFormat:@"%s", identifier.c_str()];
     [ImagePicker sharedPicker].width = width;
@@ -142,6 +142,7 @@ static ImagePicker* _sharedPicker = nil;
     NSLog(@"Image picked, save name : %@", saveName);
     NSString *mediaType = [info objectForKey: UIImagePickerControllerMediaType];
     UIImage *originalImage, *editedImage, *imageToSave;
+    bool notified = false;
     
     if (CFStringCompare ((CFStringRef) mediaType, kUTTypeImage, 0) == kCFCompareEqualTo)
     {
@@ -163,7 +164,7 @@ static ImagePicker* _sharedPicker = nil;
         
         if(imageToSave.size.width != imageToSave.size.height && rescale)
         {
-            float difference = fabsf(imageToSave.size.width - imageToSave.size.height);
+            float difference = std::abs(imageToSave.size.width - imageToSave.size.height);
             BOOL cropWidth = imageToSave.size.width > imageToSave.size.height;
             NSLog(@"Crop rect : %f, %f, %f, %f", cropWidth ? difference / 2 : 0,
                   !cropWidth ? difference / 2 : 0,
@@ -203,7 +204,7 @@ static ImagePicker* _sharedPicker = nil;
         if(result)
         {
             std::string fullPath = std::string(getenv("HOME")) + "/Documents/" + [saveName UTF8String] + ".png" ;
-            CCTextureCache::sharedTextureCache()->removeTextureForKey(fullPath.c_str());
+            Director::getInstance()->getTextureCache()->removeTextureForKey(fullPath.c_str());
             if(thumbnailScale > 0)
             {
                 targetSize.width *= thumbnailScale;
@@ -217,7 +218,7 @@ static ImagePicker* _sharedPicker = nil;
                 if(result)
                 {
                     std::string fullPathThumbnail = std::string(getenv("HOME")) + "/Documents/" + [saveName UTF8String] + "-thumbnail.png";
-                    CCTextureCache::sharedTextureCache()->removeTextureForKey(fullPathThumbnail.c_str());
+                    Director::getInstance()->getTextureCache()->removeTextureForKey(fullPathThumbnail.c_str());
                 }
                 else
                 {
@@ -225,6 +226,7 @@ static ImagePicker* _sharedPicker = nil;
                 }
             }
             notifyImagePicked([saveName UTF8String], [identifier UTF8String]);
+            notified = true;
         }
         else
         {
@@ -239,7 +241,13 @@ static ImagePicker* _sharedPicker = nil;
     {
         NSLog(@"Problem : picked a media which is not an image");
     }
-    [self imagePickerControllerDidCancel:picker];
+    [picker dismissModalViewControllerAnimated:YES];
+    Director::getInstance()->startAnimation();
+    if(popOver)
+    {
+        [popOver dismissPopoverAnimated:YES];
+    }
+    if(!notified) notifyImagePickCancelled();
 }
 
 - (void)popoverControllerDidDismissPopover:(UIPopoverController *)popoverController {
@@ -250,11 +258,13 @@ static ImagePicker* _sharedPicker = nil;
 {
     // Dismiss the image selection and close the program
     [picker dismissModalViewControllerAnimated:YES];
-    CCDirector::sharedDirector()->startAnimation();
+    Director::getInstance()->startAnimation();
     if(popOver)
     {
         [popOver dismissPopoverAnimated:YES];
     }
+    
+    notifyImagePickCancelled();
 }
 
 @end

@@ -28,7 +28,7 @@
 
 #define TYPED_DELEGATE ((VideoPlayerImplIOS*)delegate)
 
-VideoPlayer::VideoPlayer(std::string file, CCPoint position, CCSize size, bool front, bool loop)
+VideoPlayer::VideoPlayer(std::string file, Vec2 position, cocos2d::Size size, bool front, bool loop)
 {
     cocos2d::GLView *glview = cocos2d::Director::getInstance()->getOpenGLView();
     CCEAGLView *eaglview = (CCEAGLView*) glview->getEAGLView();
@@ -46,6 +46,18 @@ VideoPlayer::~VideoPlayer()
 {
     [TYPED_DELEGATE release];
     delegate = nil;
+}
+
+
+void VideoPlayer::setPlayerPosition(Vec2 position, cocos2d::Size size)
+{
+    cocos2d::GLView *glview = cocos2d::Director::getInstance()->getOpenGLView();
+    CCEAGLView *eaglview = (CCEAGLView*) glview->getEAGLView();
+    float scaleFactor = [eaglview contentScaleFactor];
+    [TYPED_DELEGATE setPlayerPosition:CGPointMake(position.x / scaleFactor,
+                                                  position.y / scaleFactor)
+                                 size:CGSizeMake(size.width/ scaleFactor,
+                                                 size.height/ scaleFactor)];
 }
 
 void VideoPlayer::play()
@@ -107,6 +119,12 @@ std::string VideoPlayer::getThumbnail(const std::string& path)
 {
     NSString* thumbnailPath = [VideoPlayerImplIOS getThumbnail:[NSString stringWithUTF8String:path.c_str()]];
     return thumbnailPath != nil ? [thumbnailPath UTF8String] : "";
+}
+
+cocos2d::Size VideoPlayer::getVideoSize(const std::string& path)
+{
+    CGSize size = [VideoPlayerImplIOS getVideoSize:[NSString stringWithUTF8String:path.c_str()]];
+    return cocos2d::Size(size.width, size.height);
 }
 
 bool VideoPlayer::isValidVideo(const std::string& filePath)

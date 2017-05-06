@@ -21,6 +21,7 @@ import android.graphics.Bitmap.CompressFormat;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.opengl.Visibility;
 import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -28,6 +29,7 @@ import android.util.Log;
 import android.view.Gravity;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.VideoView;
 
@@ -66,6 +68,7 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 	
 	private static boolean isPrepared = false;
 	private static boolean shouldLoop;
+	private static boolean hideOnPause;
 	private static boolean videoEnded; //Video ended is there because restart is different than play for LibVLC
 	private static float lastPlaybackRate; //Playback rate must be kept between sessions (when restarting video)
 	private static org.videolan.libvlc.MediaPlayer vlcMediaPlayer;
@@ -121,6 +124,7 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 		localWidth = width;
 		isPrepared = false;
 		shouldLoop = loop;
+		hideOnPause = false;
 		final File videoFile = getFile(path);
 		if(videoFile == null)
 		{
@@ -235,8 +239,9 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
                     FrameLayout.LayoutParams lp = VideoPlayer.isFullScreen ?
                                                     new FrameLayout.LayoutParams(VideoPlayer.widthScreen, VideoPlayer.heightScreen, Gravity.CENTER) :
                                                     new FrameLayout.LayoutParams((int) VideoPlayer.localWidth, (int) VideoPlayer.localHeight);
-            		lp.leftMargin = (int)(VideoPlayer.isFullScreen ? 0 : widthScreen - localX - (localWidth / 2) + 0.5);
+            		lp.leftMargin = (int)(VideoPlayer.isFullScreen ? 0 : localX - (localWidth / 2) + 0.5);
             		lp.topMargin = (int)(VideoPlayer.isFullScreen ? 0 : heightScreen - localY - (localHeight / 2) + 0.5);
+					lp.gravity = isFullScreen ? Gravity.CENTER : (Gravity.TOP | Gravity.START);
             		video.setLayoutParams(lp);
                     Log.i(TAG, "widthScreen : " + widthScreen);
                     Log.i(TAG, "heightScreen : " + heightScreen);
@@ -268,6 +273,29 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 		});
 	}
 
+	public static void setPlayerPosition(float x, float y, float height, float width)
+	{
+		localX = x;
+		localY = y;
+		localHeight = height;
+		localWidth = width;
+		NativeUtility.getMainActivity().runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				if(videoView != null)
+				{
+					FrameLayout.LayoutParams lp = VideoPlayer.isFullScreen ?
+							new FrameLayout.LayoutParams(VideoPlayer.widthScreen, VideoPlayer.heightScreen, Gravity.CENTER) :
+							new FrameLayout.LayoutParams((int) VideoPlayer.localWidth, (int) VideoPlayer.localHeight);
+					lp.leftMargin = (int)(VideoPlayer.isFullScreen ? 0 : localX - (localWidth / 2) + 0.5);
+					lp.topMargin = (int)(VideoPlayer.isFullScreen ? 0 : heightScreen - localY - (localHeight / 2) + 0.5);
+					lp.gravity = isFullScreen ? Gravity.CENTER : (Gravity.TOP | Gravity.START);
+					videoView.setLayoutParams(lp);
+					videoView.invalidate();
+				}
+			}});
+	}
+
 	public static void play()
 	{
 		Log.i(TAG, "Play.");
@@ -295,6 +323,15 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 			}
 			((VideoView)videoView).start();
 		}
+		if(hideOnPause)
+		{
+			NativeUtility.getMainActivity().runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					videoView.setVisibility(View.VISIBLE);
+					videoView.invalidate();
+				}});
+		}
 		videoEnded = false;
 	}
 
@@ -316,6 +353,15 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 		else if(isPrepared)
 		{
 			((VideoView)videoView).pause();
+		}
+		if(hideOnPause)
+		{
+			NativeUtility.getMainActivity().runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					videoView.setVisibility(View.GONE);
+					videoView.invalidate();
+				}});
 		}
 	}
 
@@ -384,7 +430,7 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 
 	public static void setHideOnPause(boolean hide)
 	{
-
+		hideOnPause = hide;
 	}
 
 	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
@@ -414,8 +460,9 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 		    		FrameLayout.LayoutParams lp = (android.widget.FrameLayout.LayoutParams) videoView.getLayoutParams();
 		    		lp.width  = isFullScreen ? (int) widthScreen : (int) localWidth;
 		    		lp.height = isFullScreen ? (int) heightScreen : (int) localHeight;
-		    		lp.leftMargin = (int)(isFullScreen ? 0 : widthScreen - localX - (localWidth / 2));
-		    		lp.topMargin = (int)(isFullScreen ? 0 : heightScreen - localY - (localHeight / 2));
+					lp.leftMargin = (int)(isFullScreen ? 0 : localX - (localWidth / 2) + 0.5);
+					lp.topMargin = (int)(isFullScreen ? 0 : heightScreen - localY - (localHeight / 2) + 0.5);
+					lp.gravity = isFullScreen ? Gravity.CENTER : (Gravity.TOP | Gravity.START);
 		    		videoView.setLayoutParams(lp);
 	        		videoView.invalidate();
 	        	}
@@ -529,7 +576,14 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 			Bitmap thumb; //= ThumbnailUtils.createVideoThumbnail(videoFile.getAbsolutePath(),MediaStore.Images.Thumbnails.MINI_KIND);
 			MediaMetadataRetriever retriever = new MediaMetadataRetriever();
 			try {
-		        retriever.setDataSource(videoFile.getAbsolutePath());
+				Uri appUri = NativeUtility.getMainActivity().getUriFromFileName(path);
+				if(appUri != null && appUri.toString().startsWith("android.resource://")) {
+					//Raw resources cannot be loaded with absolute path
+					retriever.setDataSource(NativeUtility.getMainActivity(), appUri);
+				}
+				else {
+					retriever.setDataSource(videoFile.getAbsolutePath());
+				}
 		        int timeInSeconds = 1;
 		        thumb = retriever.getFrameAtTime(timeInSeconds * 1000000,
 		                    MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
@@ -541,9 +595,10 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
                     thumbPath = null;
                 }
 		    } catch (Exception ex) {
-		        Log.i(TAG, "MediaMetadataRetriever got exception:" + ex);
+		        Log.i(TAG, "MediaMetadataRetriever in getThumbnail got exception:" + ex);
 		        thumbPath = null;
 		    }
+			retriever.release();
 			streamThumbnail.close();
 			Log.d(TAG, "thumbnail saved successfully");
 		} catch (FileNotFoundException e) {
@@ -556,6 +611,31 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 			thumbPath = null;
 		}
 		return thumbPath;
+	}
+
+	public static float[] getVideoSize(String path)
+	{
+		MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+		File videoFile = getFile(path);
+		float[] size = new float[2];
+		size[0] = 0;
+		size[1] = 0;
+		try {
+			Uri appUri = NativeUtility.getMainActivity().getUriFromFileName(path);
+			if(appUri != null && appUri.toString().startsWith("android.resource://")) {
+				//Raw resources cannot be loaded with absolute path
+				retriever.setDataSource(NativeUtility.getMainActivity(), appUri);
+			}
+			else {
+				retriever.setDataSource(videoFile.getAbsolutePath());
+			}
+			size[0] = Integer.valueOf(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH));
+			size[1] = Integer.valueOf(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT));
+		} catch (Exception ex) {
+			Log.i(TAG, "MediaMetadataRetriever in getVideoSize got exception:" + ex);
+		}
+		retriever.release();
+		return size;
 	}
 
 	public static boolean isValidVideo(String path)
@@ -658,8 +738,9 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 				FrameLayout.LayoutParams lp = (android.widget.FrameLayout.LayoutParams) videoView.getLayoutParams();
 				lp.width  = (int)videoWidth;
 				lp.height = (int)videoHeight;
-				lp.leftMargin = (int)(VideoPlayer.isFullScreen ? widthScreen - videoWidth - (widthScreen-videoWidth)/2 : widthScreen - localX - (videoWidth / 2));
-				lp.topMargin = (int)(VideoPlayer.isFullScreen ? heightScreen - videoHeight - (heightScreen-videoHeight)/2 : heightScreen - localY - (videoHeight / 2));
+				lp.leftMargin = (int)(VideoPlayer.isFullScreen ? 0 : widthScreen - localX - (videoWidth / 2));
+				lp.topMargin = (int)(VideoPlayer.isFullScreen ? 0 : heightScreen - localY - (videoHeight / 2));
+				lp.gravity = isFullScreen ? Gravity.CENTER : (Gravity.TOP | Gravity.START);
 				videoView.setLayoutParams(lp);
 				videoView.invalidate();
 			}

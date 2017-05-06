@@ -59,7 +59,7 @@ void resizeChildren(Node* parentNode, Node* resizeNode, float usedScale, int dep
             label->setTTFConfig(newConfig);*/
             label->setDimensions(label->getDimensions().width * usedScale, label->getDimensions().height * usedScale);
 #if VERBOSE_LOAD_CCB
-            CCLOG("label font : %s, size : %f, scale : %f, parent node scale : %f, dimensions : %f, %f, depth : %d", label->getSystemFontName().c_str(), label->getSystemFontSize(), label->getScale(), parentNode->getScale(), label->getDimensions().width, label->getDimensions().height, depth);
+            log("label font : %s, size : %f, scale : %f, parent node scale : %f, dimensions : %f, %f, depth : %d", label->getSystemFontName().c_str(), label->getSystemFontSize(), label->getScale(), parentNode->getScale(), label->getDimensions().width, label->getDimensions().height, depth);
 #endif
         }
         else if(isKindOfClass(node, CustomInput))
@@ -68,7 +68,7 @@ void resizeChildren(Node* parentNode, Node* resizeNode, float usedScale, int dep
             input->setFontSize((float)input->getFontSize() * usedScale);
             input->setPreferredSize(Size(input->getPreferredSize().width * usedScale, input->getPreferredSize().height * usedScale));
 #if VERBOSE_LOAD_CCB
-            CCLOG("input font size : %d, parent node scale : %f, dimensions : %f, %f, depth : %d", input->getFontSize(), parentNode->getScale(), input->getPreferredSize().width, input->getPreferredSize().height, depth);
+            log("input font size : %d, parent node scale : %f, dimensions : %f, %f, depth : %d", input->getFontSize(), parentNode->getScale(), input->getPreferredSize().width, input->getPreferredSize().height, depth);
 #endif
         }
         else if(isKindOfClass(node, Sprite))
@@ -95,9 +95,9 @@ void resizeChildren(Node* parentNode, Node* resizeNode, float usedScale, int dep
     }
 }
 
-Panel* loadCCBFromFileToFenneX(const char* file, const char* inPanel, int zIndex)
+Panel* loadCCBFromFileToFenneX(std::string file, std::string inPanel, int zIndex)
 {
-    if(inPanel == NULL)
+    if(inPanel.empty())
     {
         animManagers.clear();
     }
@@ -118,24 +118,25 @@ Panel* loadCCBFromFileToFenneX(const char* file, const char* inPanel, int zIndex
     timeval startTime;
     gettimeofday(&startTime, NULL);
 #endif
-    std::string filePath = ScreateF("%s%s.ccbi", file, isPhoneLayout ? "-phone" : "")->getCString();
-    CCLOG("Filepath : %s", filePath.c_str());
+    std::string filePath = file +  (isPhoneLayout ? "-phone" : "") + ".ccbi";
+    log("Filepath : %s", filePath.c_str());
     FileUtils::getInstance()->setPopupNotify(shouldNotify);
     Node* myNode = NULL;
     if(FileUtils::getInstance()->isFileExist(filePath))
     {
-        CCLOG("File exist");
+        log("File exist");
         myNode = ccbReader->readNodeGraphFromFile(filePath.c_str());
     }
     else if(isPhoneLayout)
     {
-        myNode = ccbReader->readNodeGraphFromFile(ScreateF("%s.ccbi", file)->getCString());
+        filePath = file + ".ccbi";
+        myNode = ccbReader->readNodeGraphFromFile(filePath.c_str());
     }
     
 #if VERBOSE_PERFORMANCE_TIME
     timeval middleTime;
     gettimeofday(&middleTime, NULL);
-    CCLOG("CCBReader loaded file %s in %f ms", file, getTimeDifferenceMS(startTime, middleTime));
+    log("CCBReader loaded file %s in %f ms", file.c_str(), getTimeDifferenceMS(startTime, middleTime));
 #endif
     
     //Despite cocosbuilder saying so, Label and Node (for Panel) aren't resized properly, so there it is
@@ -144,12 +145,12 @@ Panel* loadCCBFromFileToFenneX(const char* file, const char* inPanel, int zIndex
      float scaleY = (float)frameSize.height / designResolutionSize.height;
      float scale = MAX(scaleX, scaleY);
      float minScale = MIN(scaleX, scaleY);
-     CCLOG("min : %f, max : %f, loading : %f", minScale, scale, _loadingScale);*/
+     log("min : %f, max : %f, loading : %f", minScale, scale, _loadingScale);*/
     float usedScale = _loadingScale;
     
     //this code is dubious at best .... refactor it later
 #if VERBOSE_LOAD_CCB
-    CCLOG("ccb file %s loaded, doing rescaling ...", file);
+    log("ccb file %s loaded, doing rescaling ...", file.c_str());
 #endif
     for(auto node : myNode->getChildren())
     {
@@ -162,7 +163,7 @@ Panel* loadCCBFromFileToFenneX(const char* file, const char* inPanel, int zIndex
         {
             Label* label = (Label*)node;
 #if VERBOSE_LOAD_CCB
-            CCLOG("label font : %s", label->getSystemFontName().c_str());
+            log("label font : %s", label->getSystemFontName().c_str());
 #endif
             label->setSystemFontSize(label->getSystemFontSize() * usedScale);
             /*TTFConfig newConfig = label->getTTFConfig();
@@ -195,7 +196,7 @@ Panel* loadCCBFromFileToFenneX(const char* file, const char* inPanel, int zIndex
                     newConfig.fontSize *= parentNode->getScale();
                     label->setTTFConfig(newConfig);*/
 #if VERBOSE_LOAD_CCB
-                    CCLOG("label font : %s, size : %f, scale : %f, parent node scale : %f, dimensions : %f, %f, depth 1", label->getSystemFontName().c_str(), label->getSystemFontSize(), label->getScale(), parentNode->getScale(), label->getDimensions().width, label->getDimensions().height);
+                    log("label font : %s, size : %f, scale : %f, parent node scale : %f, dimensions : %f, %f, depth 1", label->getSystemFontName().c_str(), label->getSystemFontSize(), label->getScale(), parentNode->getScale(), label->getDimensions().width, label->getDimensions().height);
 #endif
                 }
                 else if(isKindOfClass(nodeChild, CustomInput))
@@ -205,7 +206,7 @@ Panel* loadCCBFromFileToFenneX(const char* file, const char* inPanel, int zIndex
                     //input->setFontSize((float)input->getFontSize() * parentNode->getScale());
 #if VERBOSE_LOAD_CCB
                     CustomInput* input = (CustomInput*)nodeChild;
-                    CCLOG("input font size : %d, parent node scale : %f, dimensions : %f, %f, depth 1", input->getFontSize() , parentNode->getScale(), input->getPreferredSize().width, input->getPreferredSize().height);
+                    log("input font size : %d, parent node scale : %f, dimensions : %f, %f, depth 1", input->getFontSize() , parentNode->getScale(), input->getPreferredSize().width, input->getPreferredSize().height);
 #endif
                 }
                 else if(isKindOfClass(nodeChild, Sprite))
@@ -232,7 +233,7 @@ Panel* loadCCBFromFileToFenneX(const char* file, const char* inPanel, int zIndex
     }
     
     Panel* parent = NULL;
-    if(inPanel != NULL)
+    if(!inPanel.empty())
     {
         myNode->setContentSize(Size(0, 0));
         parent = GraphicLayer::sharedLayer()->createPanelWithNode(inPanel, myNode, zIndex);
@@ -249,7 +250,7 @@ Panel* loadCCBFromFileToFenneX(const char* file, const char* inPanel, int zIndex
 #if VERBOSE_PERFORMANCE_TIME
     timeval endTime;
     gettimeofday(&endTime, NULL);
-    CCLOG("Node %s loaded to FenneX in %f ms, total with load file : %f ms", file, getTimeDifferenceMS(middleTime, endTime), getTimeDifferenceMS(startTime, endTime));
+    log("Node %s loaded to FenneX in %f ms, total with load file : %f ms", file.c_str(), getTimeDifferenceMS(middleTime, endTime), getTimeDifferenceMS(startTime, endTime));
 #endif
     return parent;
 }
@@ -261,7 +262,7 @@ void loadNodeToFenneX(Node* baseNode, Panel* parent)
     {
         layer->useBaseLayer((Layer*)baseNode);
 #if VERBOSE_LOAD_CCB
-        CCLOG("replaced base layer by CCB node : position : %f, %f, scale : %f", baseNode->getPosition().x, baseNode->getPosition().y, baseNode->getScale());
+        log("replaced base layer by CCB node : position : %f, %f, scale : %f", baseNode->getPosition().x, baseNode->getPosition().y, baseNode->getScale());
 #endif
     }
     
@@ -270,18 +271,27 @@ void loadNodeToFenneX(Node* baseNode, Panel* parent)
     {
         Node* node = baseNode->getChildren().at(i);
 #if VERBOSE_LOAD_CCB
-        CCLOG("doing child %d from parent %s ...", i, parent != NULL ? parent->getName() != "" ? parent->getName().c_str() : "Panel" : "base layer");
+        log("doing child %d from parent %s ...", i, parent != NULL ? parent->getName() != "" ? parent->getName().c_str() : "Panel" : "base layer");
 #endif
         RawObject* result = NULL;
         if(isKindOfClass(node, Label))
         {
             Label* label = (Label*)node;
 #if VERBOSE_LOAD_CCB
-            CCLOG("label, font : %s", label->getSystemFontName().c_str());
+            log("label, font : %s", label->getSystemFontName().c_str());
 #endif
-            CCString* translationKey = isKindOfClass(label, CustomBaseNode) ? (CCString*)dynamic_cast<CustomBaseNode*>(label)->getParameters()->objectForKey("translationKey") : NULL;
-            const std::string translated = Localization::getLocalizedString(translationKey != NULL ? translationKey->getCString() : label->getString());
-            if(translationKey == NULL || translationKey->compare(translated.c_str()) != 0)
+            std::string translationKey;
+            if(isKindOfClass(label, CustomBaseNode))
+            {
+                ValueMap& parameters = dynamic_cast<CustomBaseNode*>(label)->getParameters();
+                if(parameters.find("translationKey") != parameters.end())
+                {
+                    translationKey = parameters["translationKey"].asString();
+                }
+            }
+            
+            const std::string translated = Localization::getLocalizedString(!translationKey.empty() ? translationKey : label->getString());
+            if(translationKey.size() == 0 || translationKey != translated)
             { //Don't replace the string if it's the same, as it may only be a key, not a real label
                 label->setString(translated);
             }
@@ -290,7 +300,7 @@ void loadNodeToFenneX(Node* baseNode, Panel* parent)
         else if(isKindOfClass(node, CustomDropDownList))
         {
 #if VERBOSE_LOAD_CCB
-            CCLOG("DropDownList");
+            log("DropDownList");
 #endif
             Sprite* sprite = (Sprite*)node;
             result = layer->createDropDownListFromSprite(sprite, parent);
@@ -298,7 +308,7 @@ void loadNodeToFenneX(Node* baseNode, Panel* parent)
         else if(isKindOfClass(node, Sprite))
         {
 #if VERBOSE_LOAD_CCB
-            CCLOG("image");
+            log("image");
 #endif
             Sprite* sprite = (Sprite*)node;
             result = layer->createImageFromSprite(sprite, parent);
@@ -306,18 +316,26 @@ void loadNodeToFenneX(Node* baseNode, Panel* parent)
         else if(isKindOfClass(node, CustomInput))
         {
 #if VERBOSE_LOAD_CCB
-            CCLOG("input label");
+            log("input label");
 #endif
             ui::Scale9Sprite* sprite = (ui::Scale9Sprite*)node;
             
-            CCString* translationKey = isKindOfClass(sprite, CustomBaseNode) ? (CCString*)dynamic_cast<CustomBaseNode*>(sprite)->getParameters()->objectForKey("translationKey") : NULL;
-            std::string placeHolder = isKindOfClass(sprite, CustomInput) ? ((CustomInput*) sprite)->getPlaceHolder()->getCString() : "";
+            std::string translationKey;
+            if(isKindOfClass(sprite, CustomBaseNode))
+            {
+                ValueMap& parameters = dynamic_cast<CustomBaseNode*>(sprite)->getParameters();
+                if(parameters.find("translationKey") != parameters.end())
+                {
+                    translationKey = parameters["translationKey"].asString();
+                }
+            }
+            std::string placeHolder = isKindOfClass(sprite, CustomInput) ? ((CustomInput*) sprite)->getPlaceHolder() : "";
             
             result = layer->createInputLabelFromScale9Sprite(sprite, parent);
             
-            const std::string text = Localization::getLocalizedString(translationKey != NULL ? translationKey->getCString() : placeHolder.c_str());
-            if(translationKey == NULL || translationKey->compare(text.c_str()) != 0)
-            {
+            const std::string text = Localization::getLocalizedString(!translationKey.empty() ? translationKey : placeHolder);
+            if(translationKey.size() == 0 || translationKey != text)
+            { //Don't replace the string if it's the same, as it may only be a key, not a real label
                 ((InputLabel*) result)->setInitialText(text);
             }
             i--;
@@ -325,7 +343,7 @@ void loadNodeToFenneX(Node* baseNode, Panel* parent)
         else if(isKindOfClass(node, ui::Scale9Sprite))
         {
 #if VERBOSE_LOAD_CCB
-            CCLOG("scale sprite");
+            log("scale sprite");
 #endif
             ui::Scale9Sprite* sprite = (ui::Scale9Sprite*)node;
             result = layer->createCustomObjectFromNode(sprite, parent);
@@ -333,18 +351,18 @@ void loadNodeToFenneX(Node* baseNode, Panel* parent)
         else if(!isKindOfClass(node, ui::EditBox))
         {
 #if VERBOSE_LOAD_CCB
-            CCLOG("Edit Box");
+            log("Edit Box");
 #endif
             result = layer->createPanelFromNode(node, parent);
         }
 #if VERBOSE_LOAD_CCB
         if(result != NULL)
         {
-            CCLOG("Child %d loaded : position : %f, %f, scale : %f", i, result->getPosition().x, result->getPosition().y, result->getScale());
+            log("Child %d loaded : position : %f, %f, scale : %f", i, result->getPosition().x, result->getPosition().y, result->getScale());
         }
         else
         {
-            CCLOG("Problem loading child %d !", i);
+            log("Problem loading child %d !", i);
         }
 #endif
     }
@@ -392,7 +410,7 @@ void linkInputLabels()
                 if(dropDownList->getLinkTo() == NULL)
                 {
                     CCString* linkTo = (CCString*)child->getEventInfos()->objectForKey("LinkTo");
-                    CCArray* matchs = layer->allObjectsWithName(linkTo);
+                    CCArray* matchs = layer->allObjectsWithName(linkTo->getCString());
                     for(long j = 0; j < matchs->count(); j++)
                     {
                         RawObject* match = (RawObject*)matchs->objectAtIndex(j);

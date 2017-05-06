@@ -35,6 +35,7 @@ import android.os.Bundle;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 
 /* Implements ActivityResult so that the MainActivity doesn't have to redo all this common code
@@ -78,6 +79,8 @@ public abstract class ActivityResultNotifier extends Cocos2dxActivity implements
 		{
 			observer.onStateChanged(ActivityObserver.CREATE);
 		}
+		NativeUtility.getMainActivity().getWindow().setSoftInputMode(
+				WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
 	}
 
     public void discardSplashDialog()
@@ -158,6 +161,15 @@ public abstract class ActivityResultNotifier extends Cocos2dxActivity implements
 		else
 		{
 			Log.i("ActivityResultNotifier", "Result not OK");
+			if (resultcode == RESULT_CANCELED) {
+				for(ActivityResultResponder responder : responders) {
+					// Only the picker here need to know when it's cancelled
+					if(responder instanceof VideoPicker || responder instanceof ImagePicker)
+					{
+						responder.onActivityResult(requestCode, resultcode, intent);
+					}
+				}
+			}
 		}
 	}
 	

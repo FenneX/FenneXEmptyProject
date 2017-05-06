@@ -22,38 +22,30 @@
  THE SOFTWARE.
  ****************************************************************************///
 
-#import <UIKit/UIKit.h>
-#import <MediaPlayer/MediaPlayer.h>
+#ifndef __FenneX__ValueConversion_h__
+#define __FenneX__ValueConversion_h__
 
-@interface VideoPlayerImplIOS : NSObject
-{    
-	MPMoviePlayerController* player;
-    UIInterfaceOrientation currentOrientation;
-    CGPoint _position;
-    CGSize _size;
-    BOOL hideOnPause;
-    BOOL isFullScreen;
-    NSString* path;
-    float desiredPlaybackRate;
-}
+#include "cocos2d.h"
+#include "FenneXMacros.h"
+USING_NS_CC;
 
-@property (nonatomic) float playbackRate;
-@property (nonatomic, assign) BOOL hideOnPause;
-@property (nonatomic, readonly) BOOL fullscreen;
-@property (nonatomic, readonly) float duration;
-@property (nonatomic) float position;
+NS_FENNEX_BEGIN
 
-//The file extension will be auto-detected. If there is no extension, ".mov" will be assumed
-- (id) initWithPlayFile:(NSString*)file position:(CGPoint)position size:(CGSize)size front:(BOOL)front loop:(BOOL)loop;
-- (void) setPlayerPosition:(CGPoint)position size:(CGSize)size;
-- (void) play;
-- (void) pause;
-- (void) stop;
+/*
+ Helper to convert value to and from native types.
+ Can throw std::bad_cast if the Value is not the right type
+ */
+class ValueConversion
+{
+public:
+    static std::vector<std::string> toVectorString(Value val);
+    static std::map<std::string, std::string> toMapStringString(Value val);
+    static Value fromDaysVector(std::vector<struct tm> vec);
+    static std::vector<struct tm> toDaysVector(Value val);
+    static Value fromBoolVector(std::vector<bool> vec);
+    static std::vector<bool> toBoolVector(Value val);
+};
 
-- (void) setFullscreen:(BOOL)fullscreen animated:(BOOL)animated;
+NS_FENNEX_END
 
-+ (NSString*) getThumbnail:(NSString*)path;
-+ (CGSize) getVideoSize:(NSString*)path;
-+ (BOOL) videoExists:(NSString*)path;
-
-@end
+#endif /* __FenneX__ValueConversion_h__ */

@@ -28,9 +28,9 @@ THE SOFTWARE.
 NS_FENNEX_BEGIN
 bool CustomInput::init()
 {
-    numbersOnly = false;
     maxChar = -1;
     fontSize = -1;
+    inputMode = -1;
     return ui::Scale9Sprite::init();
 }
 
@@ -45,17 +45,17 @@ bool CustomInput::onAssignCCBCustomProperty(Ref* pTarget, const char* pMemberVar
     {
         target->setFontSize(pCCBValue.asInt());
     }
+    else if(pCCBValue.getType() == cocos2d::Value::Type::INTEGER && strcmp(pMemberVariableName, "InputMode") == 0)
+    {
+        target->setInputMode(pCCBValue.asInt());
+    }
     else if(pCCBValue.getType() == cocos2d::Value::Type::STRING && strcmp(pMemberVariableName, "placeHolder") == 0)
     {
-        target->setPlaceHolder(Screate(pCCBValue.asString()));
+        target->setPlaceHolder(pCCBValue.asString());
     }
     else if(pCCBValue.getType() == cocos2d::Value::Type::STRING && strcmp(pMemberVariableName, "fontName") == 0)
     {
-        target->setFontName(Screate(pCCBValue.asString()));
-    }
-    else if(pCCBValue.getType() == cocos2d::Value::Type::BOOLEAN && strcmp(pMemberVariableName, "numbers") == 0)
-    {
-        target->setNumbersOnly(pCCBValue.asBool());
+        target->setFontName(pCCBValue.asString());
     }
     else
     {

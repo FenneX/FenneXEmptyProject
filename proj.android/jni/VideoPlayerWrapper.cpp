@@ -65,6 +65,20 @@ void VideoPlayer::setUseVLC(bool useVLC)
     minfo.env->DeleteLocalRef(minfo.classID);
 }
 
+void VideoPlayer::setPlayerPosition(CCPoint position, CCSize size)
+{
+    JniMethodInfo minfo;
+    bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"setPlayerPosition", "(FFFF)V");
+    CCAssert(functionExist, "Function doesn't exist");
+    minfo.env->CallStaticVoidMethod(minfo.classID,
+                                    minfo.methodID,
+                                    (jfloat) position.x,
+                                    (jfloat) position.y,
+                                    (jfloat) size.height,
+                                    (jfloat) size.width);
+    minfo.env->DeleteLocalRef(minfo.classID);
+}
+
 void VideoPlayer::play()
 {
     JniMethodInfo minfo;
@@ -113,7 +127,11 @@ void VideoPlayer::setPlaybackRate(float rate)
 
 void VideoPlayer::setHideOnPause(bool hide)
 {
-#warning TODO : not implemented
+    JniMethodInfo minfo;
+    bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"setHideOnPause", "(Z)V");
+    CCAssert(functionExist, "Function doesn't exist");
+    minfo.env->CallStaticVoidMethod(minfo.classID, minfo.methodID, (jboolean)hide);
+    minfo.env->DeleteLocalRef(minfo.classID);
 }
 
 void VideoPlayer::setFullscreen(bool fullscreen, bool animated)
@@ -179,6 +197,27 @@ std::string VideoPlayer::getThumbnail(const std::string& path)
     minfo.env->DeleteLocalRef(result);
     
     return thumbnailPath;
+}
+
+CCSize VideoPlayer::getVideoSize(const std::string& path)
+{
+    JniMethodInfo minfo;
+    bool functionExist = JniHelper::getStaticMethodInfo(minfo,CLASS_NAME,"getVideoSize", "(Ljava/lang/String;)[F");
+    CCAssert(functionExist, "Function doesn't exist");
+    CCLOG("path is: %s", path.c_str());
+    jstring stringArg = minfo.env->NewStringUTF(path.c_str());
+    jfloatArray result = (jfloatArray)minfo.env->CallStaticObjectMethod(minfo.classID, minfo.methodID, stringArg);
+    minfo.env->DeleteLocalRef(minfo.classID);
+    minfo.env->DeleteLocalRef(stringArg);
+    CCAssert(minfo.env->GetArrayLength(result) == 2, "getVideoSize: result should have 2 values");
+    CCSize size;
+
+    jfloat* array = minfo.env->GetFloatArrayElements(result, 0);
+    size.width = array[0];
+    size.height = array[1];
+    minfo.env->ReleaseFloatArrayElements(result, array, 0);
+    minfo.env->DeleteLocalRef(result);
+    return size;
 }
 
 bool VideoPlayer::isValidVideo(const std::string& filePath)

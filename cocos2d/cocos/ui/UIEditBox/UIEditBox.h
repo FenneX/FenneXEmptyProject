@@ -125,38 +125,48 @@ namespace ui {
             /**
              * The user is allowed to enter any text, including line breaks.
              */
-            ANY,
+            ANY = 0,
                 
             /**
              * The user is allowed to enter an e-mail address.
              */
-            EMAIL_ADDRESS,
+            EMAIL_ADDRESS = 1,
                 
             /**
              * The user is allowed to enter an integer value.
              */
-            NUMERIC,
+            NUMERIC = 2,
                 
             /**
              * The user is allowed to enter a phone number.
              */
-            PHONE_NUMBER,
+            PHONE_NUMBER = 3,
                 
             /**
              * The user is allowed to enter a URL.
              */
-            URL,
+            URL = 4,
                 
             /**
              * The user is allowed to enter a real number value.
              * This extends kEditBoxInputModeNumeric by allowing a decimal point.
              */
-            DECIMAL,
+            DECIMAL = 5,
                 
             /**
              * The user is allowed to enter any text, except for line breaks.
              */
-            SINGLE_LINE,
+            SINGLE_LINE = 6,
+            
+            /**
+             * The user is allowed to select a time.
+             */
+            TIME = 7,
+            
+            /**
+             * The user is allowed to select a date.
+             */
+            DATE = 8,
         };
             
         /**
@@ -340,6 +350,8 @@ namespace ui {
          */
         void setFontColor(const Color3B& color);
         void setFontColor(const Color4B& color);
+        
+        Color4B getFontColor();
             
         /**
          * Set the placeholder's font. Only system font is allowed.
@@ -369,6 +381,8 @@ namespace ui {
          * Set the font color of the placeholder text when the edit box is empty.
          */
         void setPlaceholderFontColor(const Color4B& color);
+        
+        Color4B getPlaceholderFontColor();
             
         /**
          * Set a text in the edit box that acts as a placeholder when an

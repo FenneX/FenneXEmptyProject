@@ -49,7 +49,7 @@ const Size& RawObject::getSize()
 }
 const int RawObject::getZOrder()
 {
-    return this->getNode()->getZOrder();
+    return this->getNode()->getLocalZOrder();
 }
 const float RawObject::getScale()
 {
@@ -102,7 +102,7 @@ void RawObject::setOpacityRecursive(GLubyte opacity)
     }
 }
 
-CCDictionary* RawObject::getEventInfos()
+CCDictionary* RawObject::getEventInfos() const
 {
     CCDictionary* infos = CCDictionary::createWithDictionary(eventInfos);
     if(infos->objectForKey("Sender") == NULL)
@@ -131,6 +131,22 @@ void RawObject::addEventInfos(CCDictionary* infos)
     }
 }
 
+void RawObject::setEventInfo(std::string key, Value obj)
+{
+    setEventInfo(valueToRef(obj), key);
+}
+
+void RawObject::addEventInfos(ValueMap infos)
+{
+    for(auto iter = infos.begin(); iter != infos.end(); iter++)
+    {
+        if(iter->first != "Sender")
+        {
+            this->setEventInfo(iter->first, iter->second);
+        }
+    }
+}
+
 void RawObject::removeEventInfo(std::string key)
 {
     eventInfos->removeObjectForKey(key);
@@ -139,7 +155,6 @@ void RawObject::removeEventInfo(std::string key)
 RawObject::RawObject():
 name(""),
 eventName(""),
-help(""),
 isEventActivated(true)
 {
     eventInfos = CCDictionary::create();
@@ -186,5 +201,24 @@ bool RawObject::containsRect(Rect rect)
         return true;
     }
     return false;
+}
+
+bool operator<(const RawObject& obj1, const RawObject& obj2)
+{
+    if(isKindOfClass(obj1.getEventInfos()->objectForKey("Order"), CCInteger) && isKindOfClass(obj2.getEventInfos()->objectForKey("Order"), CCInteger))
+    {
+        int obj1Order = TOINT(obj1.getEventInfos()->objectForKey("Order"));
+        int obj2Order = TOINT(obj2.getEventInfos()->objectForKey("Order"));
+        return obj1Order < obj2Order;
+    }
+    if(isKindOfClass(obj1.getEventInfos()->objectForKey("Index"), CCInteger) && isKindOfClass(obj2.getEventInfos()->objectForKey("Index"), CCInteger))
+    {
+        int obj1Order = TOINT(obj1.getEventInfos()->objectForKey("Index"));
+        int obj2Order = TOINT(obj2.getEventInfos()->objectForKey("Index"));
+        return obj1Order < obj2Order;
+    }
+    //If all else fails, order them by screen zorder
+    GraphicLayer* layer = GraphicLayer::sharedLayer();
+    return layer->isInFront(layer->getById(obj1.getID()), layer->getById(obj2.getID()));
 }
 NS_FENNEX_END

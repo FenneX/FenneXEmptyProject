@@ -83,45 +83,6 @@ void arrayRemoveStringFromOther(CCArray* list, CCArray* other)
     list->removeObjectsInArray(objectsToRemove);
 }
 
-const char* changeFirstLetterCase(const char* text, bool lower)
-{
-    return changeFirstLetterCase(Screate(text), lower)->getCString();
-}
-
-CCString* changeFirstLetterCase(CCString* text, bool lower)
-{
-    if(text->length() > 0)
-    {
-        char firstChar = lower ? tolower(text->getCString()[0]) : toupper(text->getCString()[0]);
-        std::string textString = std::string(text->getCString());
-        std::string subString = textString.substr(1);
-        const char* rest = subString.c_str();
-        //reconstruct the char with first character lower cased
-        text = ScreateF("%c%s", firstChar, rest);
-    }
-    return text;
-}
-
-CCString* upperCaseFirstLetter(CCString* text)
-{
-    return changeFirstLetterCase(text, false);
-}
-
-const char* upperCaseFirstLetter(const char* text)
-{
-    return changeFirstLetterCase(text, false);
-}
-
-CCString* lowerCaseFirstLetter(CCString* text)
-{
-    return changeFirstLetterCase(text, true);
-}
-
-const char* lowerCaseFirstLetter(const char* text)
-{
-    return changeFirstLetterCase(text, true);
-}
-
 std::vector<std::pair<std::string, std::string>> getConversions()
 {
     std::vector<std::pair<std::string, std::string>> result;
@@ -154,23 +115,20 @@ std::vector<std::pair<std::string, std::string>> getConversions()
     return result;
 }
 
-CCString* upperCaseString(CCString* text)
+std::string upperCase(std::string text)
 {
-    timeval startTime;
-    gettimeofday(&startTime, NULL);
     //TODO : speed up by sorting the vector and doing a better search
     static std::vector<std::pair<std::string, std::string>> conversions = getConversions();
     if(conversions.size() == 0)
     {
-        CCLOG("Warning: missing file letters_conversion.txt, required for upperCaseString, string %s not converted", text->getCString());
+        log("Warning: missing file letters_conversion.txt, required for upperCase, string %s not converted", text.c_str());
         return text;
     }
-    std::string from = text->getCString();
     std::string to;
-    for(int i = 0; i < from.length(); i+= utf8_chsize(&from[i]))
+    for(int i = 0; i < text.length(); i+= utf8_chsize(&text[i]))
     {
-        long charLength = utf8_chsize(&from[i]);
-        std::string charString = from.substr(i, charLength);
+        long charLength = utf8_chsize(&text[i]);
+        std::string charString = text.substr(i, charLength);
         int conversionIndex = 0;
         while(conversionIndex < conversions.size() && conversions[conversionIndex].second != charString)
         {
@@ -185,25 +143,45 @@ CCString* upperCaseString(CCString* text)
             to += charString;
         }
     }
-    timeval endTime;
-    gettimeofday(&endTime, NULL);
-    return Screate(to.c_str());
+    return to;
 }
 
-const char* upperCaseString(const char* text)
+std::string lowerCase(std::string text)
 {
-    return upperCaseString(Screate(text))->getCString();
+    //TODO : speed up by sorting the vector and doing a better search
+    static std::vector<std::pair<std::string, std::string>> conversions = getConversions();
+    if(conversions.size() == 0)
+    {
+        log("Warning: missing file letters_conversion.txt, required for upperCase, string %s not converted", text.c_str());
+        return text;
+    }
+    std::string to;
+    for(int i = 0; i < text.length(); i+= utf8_chsize(&text[i]))
+    {
+        long charLength = utf8_chsize(&text[i]);
+        std::string charString = text.substr(i, charLength);
+        int conversionIndex = 0;
+        while(conversionIndex < conversions.size() && conversions[conversionIndex].first != charString)
+        {
+            conversionIndex++;
+        }
+        if(conversionIndex < conversions.size())
+        {
+            to += conversions[conversionIndex].second;
+        }
+        else
+        {
+            to += charString;
+        }
+    }
+    return to;
 }
 
-bool stringEndsWith(const char *str, const char *suffix)
+bool stringEndsWith(std::string str, std::string suffix)
 {
-    if (!str || !suffix)
-        return 0;
-    long lenstr = strlen(str);
-    long lensuffix = strlen(suffix);
-    if (lensuffix >  lenstr)
-        return 0;
-    return strncmp(str + lenstr - lensuffix, suffix, lensuffix) == 0;
+    if (suffix.length() >  str.length())
+        return false;
+    return str.substr(str.length() - suffix.length()) == suffix;
 }
 
 //Copied from http://stackoverflow.com/questions/154536/encode-decode-urls-in-c

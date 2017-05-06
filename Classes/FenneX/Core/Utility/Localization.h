@@ -38,16 +38,15 @@ class Localization
 public:
     static bool willTranslate();
     static CCString* getLocalizedString(CCString* string);
-    static const char* getLocalizedString(const char* string);
     static const std::string getLocalizedString(const std::string& string);
     
     static void loadAdditionalTranslations(std::function<std::string(std::string)> resolveLanguageFile);
 private:
-    static CCString* currentLanguage;
-    static CCDictionary* infos;
-    static CCArray* availableTranslations;
+    static std::string currentLanguage;
+    static std::map<std::string, std::string> translations;
+    static std::vector<std::string> availableTranslations;
     static bool loadAvailableTranslations();
-    static void loadInfos();
+    static void loadTranslations();
 };
 NS_FENNEX_END
 

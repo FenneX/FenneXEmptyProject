@@ -48,51 +48,30 @@ void GraphicLayer::init()
 {
     nextAvailableId = 0;
     relatedScene = NULL;
-    isPaused = false;
-    mainPanels = new CCArray();
     storedObjects = new CCArray();
     storedPanels = new CCArray();
     layer = Layer::create();
     layer->retain();
-    depthInScene = 0;
     clock = 0;
     isUpdating = false;
-    objectsToAdd = new CCArray();
-    objectsToRemove = new CCArray();
-    childParent = new CCDictionary();
-    tapObserver = NULL;
 }
 
 GraphicLayer::~GraphicLayer()
 {
 #if VERBOSE_DEALLOC
-    CCLOG("Layer dealloc");
+    log("Layer dealloc");
 #endif
     this->clear();
     s_SharedLayer = NULL;
-    mainPanels->release();
     storedObjects->release();
     storedPanels->release();
     layer->release();
-    objectsToAdd->release();
-    objectsToRemove->release();
-    childParent->release();
-}
-
-void GraphicLayer::setTapObserver(ButtonTapObserver* observer)
-{
-    tapObserver = observer;
-}
-
-ButtonTapObserver* GraphicLayer::getTapObserver()
-{
-    return tapObserver;
 }
 
 void GraphicLayer::useBaseLayer(Layer* otherLayer)
 {
     Node* parent = layer->getParent();
-    parent->addChild(otherLayer, depthInScene);
+    parent->addChild(otherLayer);
     parent->removeChild(layer, true);
     //Ensure the layer is properly released: actually, only the first one (at launch) will have a retain count of 2 here
     if(layer->getReferenceCount() == 2)
@@ -103,17 +82,16 @@ void GraphicLayer::useBaseLayer(Layer* otherLayer)
     layer->retain();
 }
 
-void GraphicLayer::renderOnLayer(Scene* destination, int depth)
+void GraphicLayer::renderOnLayer(Scene* destination)
 {
     relatedScene = destination;
-    depthInScene = depth;
     //Ensure that the layer is not on another Scene
     if(layer->getParent() != NULL)
     {
         layer->removeFromParentAndCleanup(true);
     }
     storedObjects->removeAllObjects();
-    destination->addChild(layer, depth);
+    destination->addChild(layer);
     layer->setScale(SceneSwitcher::sharedSwitcher()->getScale());
 }
 
@@ -128,224 +106,128 @@ void GraphicLayer::stop()
     this->stopRenderOnLayer(relatedScene, false);
 }
 
-/* TODO : create it if needed
- RawObject* GraphicLayer::createObject(Ref* firstObject, ... )
- {
- return NULL;
- }
- 
- RawObject* GraphicLayer::createObject(CCDictionary* values)
- {
- return NULL;
- }*/
-
-Image* GraphicLayer::createImage(Ref* firstObject, ... )
+Vec2 getPos(ValueMap values)
 {
-    Ref* eachObject;
-    va_list argumentList;
-    bool key = true;
-    Ref* object;
-    if (firstObject)                      // The first argument isn't part of the varargs list,
-    {                                   // so we'll handle it separately.
-        //put all parameters in a Dictionary to access them as key/value pairs
-        CCDictionary* values = CCDictionary::create();
-        object = firstObject;
-        va_start(argumentList, firstObject);          // Start scanning for arguments after firstObject.
-        while ((eachObject = va_arg(argumentList, Ref*)) != NULL) // As many times as we can get an argument of type "id"
-        {
-            if(key)
-            {
-                //keys should be Strings
-                if(!isKindOfClass(eachObject, CCString))
-                {
-#if VERBOSE_WARNING
-                    CCLOG("Warning : not a key, value ignored");
-#endif
-                }
-                else
-                {
-                    CCString* key = (CCString*)eachObject;
-                    values->setObject(object, key->_string);
-                }
-            }
-            else
-            {
-                object = eachObject;
-            }
-            key = !key;
-        }
-        va_end(argumentList);
-        return this->createImage(values);
-    }
-#if VERBOSE_WARNING
-    else
+    Vec2 pos = Vec2(0, 0);
+    if(values.find("X") != values.end() && values.at("X").getType() == Value::Type::FLOAT)
     {
-        CCLOG("Warning : createImage called with no firstObject");
+        pos.x = values.at("X").asFloat();
     }
-#endif
-    return NULL;
+    if(values.find("Y") != values.end() && values.at("Y").getType() == Value::Type::FLOAT)
+    {
+        pos.y = values.at("Y").asFloat();
+    }
+    return pos;
 }
 
-Image* GraphicLayer::createImage(CCDictionary* values)
+int getZindex(ValueMap values)
 {
-    Image* img = NULL;
-    
-    //try to create an image : each value is checked : if it exists and if it is of the right type
-    //an image should have at least an ImageFile (String) or ImageData and cocosName (String) for texture
-    if((values->objectForKey("ImageFile") != NULL
-        && isKindOfClass(values->objectForKey("ImageFile"), CCString)) ||
-       /*(values->objectForKey("ImageData") != NULL
-        && values->objectForKey("cocosName") != NULL
-        &&  isKindOfClass(values->objectForKey("cocosName"), CCString) ) ||*/
-       (values->objectForKey("SpriteSheetFile") != NULL
-        &&  isKindOfClass(values->objectForKey("SpriteSheetFile"), CCString)
-        && values->objectForKey("Capacity") != NULL
-        &&  isKindOfClass(values->objectForKey("Capacity"), CCInteger)))
+    if(values.find("Zindex") != values.end() && values.at("Zindex").getType() == Value::Type::INTEGER)
     {
-        Vec2 pos = Vec2(0, 0);
-        if(values->objectForKey("PositionX") != NULL
-           && isKindOfClass(values->objectForKey("PositionX"), CCInteger))
-        {
-            pos.x = ((CCInteger*)values->objectForKey("PositionX"))->getValue();
-        }
-        if(values->objectForKey("PositionY") != NULL
-           && isKindOfClass(values->objectForKey("PositionY"), CCInteger))
-        {
-            pos.y =  ((CCInteger*)values->objectForKey("PositionY"))->getValue();
-        }
-        if(values->objectForKey("Position") != NULL
-           && isKindOfClass(values->objectForKey("Position"), TMPPoint))
-        {
-            pos.x =  ((TMPPoint*)values->objectForKey("Position"))->x;
-            pos.y =  ((TMPPoint*)values->objectForKey("Position"))->y;
-        }
-        if(values->objectForKey("ImageFile") != NULL
-           && isKindOfClass(values->objectForKey("ImageFile"), CCString))
-        {
-#if VERBOSE_LOAD_CCB
-            CCLOG("creating image %s", ((CCString*)values->objectForKey("ImageFile"))->getCString());
-#endif
-            img = new Image(((CCString*)values->objectForKey("ImageFile"))->getCString(), pos);
-        }
-        /*else if(values->objectForKey("cocosName") != NULL
-         && [values->objectForKey("cocosName"] isKindOfClass:[NSString class]])
-         {
-         CGImageRef imageRef = (CGImageRef) values->objectForKey("ImageData"];
-         img = [[Image alloc] initWithImageData:imageRef location:pos name:values->objectForKey("cocosName"]];
-         }*/
-        else
-        {
-            img = new Image(((CCString*)values->objectForKey("SpriteSheetFile"))->getCString(), pos, ((CCInteger*)values->objectForKey("Capacity"))->getValue());
-        }
-        
-        
-        if(img != NULL)
-        {
-            if(values->objectForKey("Zindex") != NULL && isKindOfClass(values->objectForKey("Zindex"), CCInteger))
-            {
-                this->addObject(img, ((CCInteger*)values->objectForKey("Zindex"))->getValue());
-            }
-            else
-            {
-                this->addObject(img);
-            }
-            img->release();
-            
-            //try to process optional parameters if they exist : Name (String), EventName (String)  Panel (Panel)
-            if(values->objectForKey("Name") != NULL && isKindOfClass(values->objectForKey("Name"), CCString))
-            {
-                img->setName(((CCString*)values->objectForKey("Name"))->getCString());
-            }
-            if(values->objectForKey("EventName") != NULL && isKindOfClass(values->objectForKey("EventName"), CCString))
-            {
-                img->setEventName(((CCString*)values->objectForKey("EventName"))->getCString());
-            }
-            if(values->objectForKey("Scale") != NULL && isKindOfClass(values->objectForKey("Scale"), CCFloat))
-            {
-                img->setScale(((CCFloat*)values->objectForKey("Scale"))->getValue());
-            }
-            if(values->objectForKey("EventInfos") != NULL && isKindOfClass(values->objectForKey("EventInfos"), CCDictionary))
-            {
-                CCDictionary* parameters = (CCDictionary*)values->objectForKey("EventInfos");
-                CCArray* keys = parameters->allKeys();
-                for(int i = 0; i < keys->count(); i++)
-                {
-                    std::string key = ((CCString*)keys->objectAtIndex(i))->_string;
-                    img->setEventInfo(parameters->objectForKey(key), key);
-                }
-            }
-            
-            if(values->objectForKey("Panel") != NULL && isKindOfClass(values->objectForKey("Panel"), Panel))
-            {
-#if VERBOSE_WARNING
-                if(values->objectForKey("Zindex") != NULL && isKindOfClass(values->objectForKey("Zindex"), CCInteger))
-                {
-                    CCLOG("Warning : try to add image in a Panel with a Zindex : currently, depth is not supported in panels");
-                }
-#endif
-                this->placeObject(img, (Panel*)values->objectForKey("Panel"));
-            }
-            if(values->objectForKey("Visible") != NULL && isKindOfClass(values->objectForKey("Visible"), CCInteger))
-            {
-                img->setVisible(((CCInteger*)values->objectForKey("Visible"))->getValue());
-            }
-            if(values->objectForKey("Opacity") != NULL && isKindOfClass(values->objectForKey("Opacity"), CCInteger))
-            {
-                ((Sprite*)img->getNode())->setOpacity(((CCInteger*)values->objectForKey("Opacity"))->getValue());
-            }
-            if(values->objectForKey("Help") != NULL && isKindOfClass(values->objectForKey("Help"), CCString))
-            {
-                img->setHelp(((CCString*)values->objectForKey("Help"))->getCString());
-            }
-        }
-        else
-        {
-#if VERBOSE_WARNING
-            CCLOG("Warning : error creating image with file %s, perhaps the file name is incorrect or the file is too large", ((CCString*)values->objectForKey("ImageFile"))->getCString());
-#endif
-        }
+        return values.at("Zindex").asInt();
     }
-#if VERBOSE_WARNING
+    return 0;
+}
+
+Image* GraphicLayer::createImage(std::string imageFile, ValueMap values)
+{
+#if VERBOSE_LOAD_CCB
+    log("Creating Image %s", imageFile.c_str());
+#endif
+    Image* obj = new Image(imageFile, getPos(values));
+    if(obj != NULL)
+    {
+        this->addObject(obj, getZindex(values));
+        obj->release();
+        setObjectFields(obj, values);
+    }
     else
     {
-        CCLOG("Warning : createImage aborted, incorrect parameter types");
+#if VERBOSE_WARNING
+        log("Warning : error creating Image with file %s, perhaps the file name is incorrect or the file is too large", imageFile.c_str());
+#endif
     }
-#endif
 #if VERBOSE_LOAD_CCB
-    CCLOG("Ended creating image");
+    log("Ended creating Image");
 #endif
-    return img;
+    return obj;
+}
+
+Image* GraphicLayer::createAnimatedImage(std::string spriteSheetFile, int capacity, ValueMap values)
+{
+#if VERBOSE_LOAD_CCB
+    log("Creating animated Image %s", spriteSheetFile.c_str());
+#endif
+    Image* obj = new Image(spriteSheetFile, getPos(values), capacity);
+    if(obj != NULL)
+    {
+        this->addObject(obj, getZindex(values));
+        obj->release();
+        setObjectFields(obj, values);
+    }
+    else
+    {
+#if VERBOSE_WARNING
+        log("Warning : error creating animated Image with file %s, perhaps the file name is incorrect or the file is too large", spriteSheetFile.c_str());
+#endif
+    }
+#if VERBOSE_LOAD_CCB
+    log("Ended creating animated Image");
+#endif
+    return obj;
 }
 
 Image* GraphicLayer::createImageFromSprite(Sprite* sprite, Panel* parent)
 {
-    Image* img = NULL;
-    img = new Image(sprite);
-    if(img != NULL)
-    {
-        storedObjects->addObject(img);
-        if(parent != NULL)
-        {
-            parent->addChild(img);
-            childParent->setObject(parent, img->getID());
-        }
-        img->release();
-    }
-    this->loadBaseNodeAttributes(dynamic_cast<CustomBaseNode*>(sprite), img);
-    return img;
-}
-
-CustomObject* GraphicLayer::createCustomObjectFromNode(Node* node, Panel* parent)
-{
-    CustomObject* obj = NULL;
-    obj = new CustomObject(node);
+    Image* obj = new Image(sprite);
     if(obj != NULL)
     {
         storedObjects->addObject(obj);
         if(parent != NULL)
         {
             parent->addChild(obj);
-            childParent->setObject(parent, obj->getID());
+            childsParents[obj->getID()] = parent;
+        }
+        obj->release();
+    }
+    this->loadBaseNodeAttributes(dynamic_cast<CustomBaseNode*>(sprite), obj);
+    return obj;
+}
+
+CustomObject* GraphicLayer::createCustomObject(Node* delegate, ValueMap values)
+{
+#if VERBOSE_LOAD_CCB
+    log("Creating CustomObject");
+#endif
+    CustomObject* obj = new CustomObject(delegate, getPos(values));
+    if(obj != NULL)
+    {
+        this->addObject(obj, getZindex(values));
+        obj->release();
+        setObjectFields(obj, values);
+    }
+    else
+    {
+#if VERBOSE_WARNING
+        log("Warning : error creating CustomObject");
+#endif
+    }
+#if VERBOSE_LOAD_CCB
+    log("Ended creating CustomObject");
+#endif
+    return obj;
+}
+
+CustomObject* GraphicLayer::createCustomObjectFromNode(Node* node, Panel* parent)
+{
+    CustomObject* obj = new CustomObject(node);
+    if(obj != NULL)
+    {
+        storedObjects->addObject(obj);
+        if(parent != NULL)
+        {
+            parent->addChild(obj);
+            childsParents[obj->getID()] = parent;
         }
         obj->release();
     }
@@ -353,952 +235,159 @@ CustomObject* GraphicLayer::createCustomObjectFromNode(Node* node, Panel* parent
     return obj;
 }
 
-CustomObject* GraphicLayer::createCustomObject(Ref* firstObject, ... )
+Size getDimensions(ValueMap values)
 {
-    Ref* eachObject;
-    va_list argumentList;
-    bool key = true;
-    Ref* object;
-    if (firstObject)                      // The first argument isn't part of the varargs list,
-    {                                   // so we'll handle it separately.
-        //put all parameters in a Dictionary to access them as key/value pairs
-        CCDictionary* values = CCDictionary::create();
-        object = firstObject;
-        va_start(argumentList, firstObject);          // Start scanning for arguments after firstObject.
-        while ((eachObject = va_arg(argumentList, Ref*)) != NULL) // As many times as we can get an argument of type "id"
-        {
-            if(key)
-            {
-                //keys should be Strings
-                if(!isKindOfClass(eachObject, CCString))
-                {
-#if VERBOSE_WARNING
-                    CCLOG("Warning : not a key, value ignored");
-#endif
-                }
-                else
-                {
-                    CCString* key = (CCString*)eachObject;
-                    values->setObject(object, key->_string);
-                }
-            }
-            else
-            {
-                object = eachObject;
-            }
-            key = !key;
-        }
-        va_end(argumentList);
-        return this->createCustomObject(values);
-    }
-#if VERBOSE_WARNING
-    else
+    if(values.find("DimX") != values.end() && values.at("DimX").getType() == Value::Type::FLOAT &&
+       values.find("DimY") != values.end() && values.at("DimY").getType() == Value::Type::FLOAT)
     {
-        CCLOG("Warning : createCustomObject called with no firstObject");
+        return Size(values.at("DimX").asFloat(), values.at("DimY").asFloat());
     }
-#endif
-    return NULL;
+    return Size(0, 0);
 }
 
-CustomObject* GraphicLayer::createCustomObject(CCDictionary* values)
+TextHAlignment getAlignment(ValueMap values)
 {
-    CustomObject* obj = NULL;
-    
-    //try to create an image : each value is checked : if it exists and if it is of the right type
-    //an image should have at least an ImageFile (String) or ImageData and cocosName (String) for texture
-    if(values->objectForKey("Delegate") != NULL
-       && isKindOfClass(values->objectForKey("Delegate"), Node))
+    if(values.find("TextFormat") != values.end() && values.at("TextFormat").getType() == Value::Type::INTEGER)
     {
-        Vec2 pos = Vec2(0, 0);
-        if(values->objectForKey("PositionX") != NULL
-           && isKindOfClass(values->objectForKey("PositionX"), CCInteger))
-        {
-            pos.x = ((CCInteger*)values->objectForKey("PositionX"))->getValue();
-        }
-        if(values->objectForKey("PositionY") != NULL
-           && isKindOfClass(values->objectForKey("PositionY"), CCInteger))
-        {
-            pos.y =  ((CCInteger*)values->objectForKey("PositionY"))->getValue();
-        }
-        if(values->objectForKey("Position") != NULL
-           && isKindOfClass(values->objectForKey("Position"), TMPPoint))
-        {
-            pos.x =  ((TMPPoint*)values->objectForKey("Position"))->x;
-            pos.y =  ((TMPPoint*)values->objectForKey("Position"))->y;
-        }
-        if(values->objectForKey("Delegate") != NULL
-           && isKindOfClass(values->objectForKey("Delegate"), Node))
-            
-        {
-            obj = new CustomObject((Node*)values->objectForKey("Delegate"), pos);
-        }
-        
-        
-        if(obj != NULL)
-        {
-            if(values->objectForKey("Zindex") != NULL && isKindOfClass(values->objectForKey("Zindex"), CCInteger))
-            {
-                this->addObject(obj, ((CCInteger*)values->objectForKey("Zindex"))->getValue());
-            }
-            else
-            {
-                this->addObject(obj);
-            }
-            obj->release();
-            
-            //try to process optional parameters if they exist : Name (String), EventName (String)  Panel (Panel)
-            if(values->objectForKey("Name") != NULL && isKindOfClass(values->objectForKey("Name"), CCString))
-            {
-                obj->setName(((CCString*)values->objectForKey("Name"))->getCString());
-            }
-            if(values->objectForKey("EventName") != NULL && isKindOfClass(values->objectForKey("EventName"), CCString))
-            {
-                obj->setEventName(((CCString*)values->objectForKey("EventName"))->getCString());
-            }
-            if(values->objectForKey("Scale") != NULL && isKindOfClass(values->objectForKey("Scale"), CCFloat))
-            {
-                obj->setScale(((CCFloat*)values->objectForKey("Scale"))->getValue());
-            }
-            if(values->objectForKey("EventInfos") != NULL && isKindOfClass(values->objectForKey("EventInfos"), CCDictionary))
-            {
-                CCDictionary* parameters = (CCDictionary*)values->objectForKey("EventInfos");
-                CCArray* keys = parameters->allKeys();
-                for(int i = 0; i < keys->count(); i++)
-                {
-                    std::string key = ((CCString*)keys->objectAtIndex(i))->_string;
-                    obj->setEventInfo(parameters->objectForKey(key), key);
-                }
-            }
-            
-            if(values->objectForKey("Panel") != NULL && isKindOfClass(values->objectForKey("Panel"), Panel))
-            {
-#if VERBOSE_WARNING
-                if(values->objectForKey("Zindex") != NULL && isKindOfClass(values->objectForKey("Zindex"), CCInteger))
-                {
-                    CCLOG("Warning : try to add image in a Panel with a Zindex : currently, depth is not supported in panels");
-                }
-#endif
-                this->placeObject(obj, (Panel*)values->objectForKey("Panel"));
-            }
-            if(values->objectForKey("Visible") != NULL && isKindOfClass(values->objectForKey("Visible"), CCInteger))
-            {
-                obj->setVisible(((CCInteger*)values->objectForKey("Visible"))->getValue());
-            }
-            if(values->objectForKey("Opacity") != NULL && isKindOfClass(values->objectForKey("Opacity"), CCInteger))
-            {
-                ((Sprite*)obj->getNode())->setOpacity(((CCInteger*)values->objectForKey("Opacity"))->getValue());
-            }
-            if(values->objectForKey("Help") != NULL && isKindOfClass(values->objectForKey("Help"), CCString))
-            {
-                obj->setHelp(((CCString*)values->objectForKey("Help"))->getCString());
-            }
-        }
-#if VERBOSE_WARNING
-        else
-        {
-            CCLOG("Warning : error creating CustomObject");
-        }
-#endif
+        return (TextHAlignment)values.at("TextFormat").asInt();
     }
-#if VERBOSE_WARNING
+    return TextHAlignment::CENTER;
+}
+
+LabelTTF* GraphicLayer::createLabelTTF(std::string label, std::string fontFile, ValueMap values)
+{
+#if VERBOSE_LOAD_CCB
+    log("Creating LabelTTF %s", label.c_str());
+#endif
+    LabelTTF* obj = new LabelTTF(label, fontFile, getPos(values), getDimensions(values), getAlignment(values));
+    if(obj != NULL)
+    {
+        this->addObject(obj, getZindex(values));
+        obj->release();
+        setObjectFields(obj, values);
+    }
     else
     {
-        CCLOG("Warning : createCustomObject aborted, incorrect parameter types");
-    }
+#if VERBOSE_WARNING
+        log("Warning : error creating LabelTTF %s with font %s, perhaps the font is not properly added to project", label.c_str(), fontFile.c_str());
 #endif
+    }
 #if VERBOSE_LOAD_CCB
-    CCLOG("Ended creating Custom Object");
+    log("Ended creating LabelTTF");
 #endif
     return obj;
 }
 
-
-
-LabelTTF* GraphicLayer::createLabelTTF(Ref* firstObject, ... )
-{
-    Ref* eachObject;
-    va_list argumentList;
-    bool key = true;
-    Ref* object;
-    if (firstObject)                      // The first argument isn't part of the varargs list,
-    {                                   // so we'll handle it separately.
-        //put all parameters in a Dictionary to access them as key/value pairs
-        CCDictionary* values = CCDictionary::create();
-        object = firstObject;
-        va_start(argumentList, firstObject);          // Start scanning for arguments after firstObject.
-        while ((eachObject = va_arg(argumentList, Ref*)) != NULL) // As many times as we can get an argument of type "id"
-        {
-            if(key)
-            {
-                //keys should be Strings
-                if(!isKindOfClass(eachObject, CCString))
-                {
-#if VERBOSE_WARNING
-                    CCLOG("Warning : not a key, value ignored");
-#endif
-                }
-                else
-                {
-                    CCString* key = (CCString*)eachObject;
-                    values->setObject(object, key->_string);
-                }
-            }
-            else
-            {
-                object = eachObject;
-            }
-            key = !key;
-        }
-        va_end(argumentList);
-        return this->createLabelTTF(values);
-    }
-#if VERBOSE_WARNING
-    else
-    {
-        CCLOG("Warning : createLabelTTF called with no firstObject");
-    }
-#endif
-    return NULL;
-}
-
-LabelTTF* GraphicLayer::createLabelTTF(CCDictionary* values)
-{
-    LabelTTF* label = NULL;
-    
-    //try to create an image : each value is checked : if it exists and if it is of the right type
-    //an image should have at least an ImageFile (String) or ImageData and cocosName (String) for texture
-    if(values->objectForKey("Label") != NULL
-       && isKindOfClass(values->objectForKey("Label"), CCString)
-       && values->objectForKey("FontFile") != NULL
-       && isKindOfClass(values->objectForKey("FontFile"), CCString))
-    {
-#if VERBOSE_LOAD_CCB
-        CCLOG("creating labelTTF %s", ((CCString*)values->objectForKey("Label"))->getCString());
-#endif
-        Vec2 pos = Vec2(0, 0);
-        if(values->objectForKey("PositionX") != NULL
-           && isKindOfClass(values->objectForKey("PositionX"), CCInteger))
-        {
-            pos.x = ((CCInteger*)values->objectForKey("PositionX"))->getValue();
-        }
-        if(values->objectForKey("PositionY") != NULL
-           && isKindOfClass(values->objectForKey("PositionY"), CCInteger))
-        {
-            pos.y =  ((CCInteger*)values->objectForKey("PositionY"))->getValue();
-        }
-        if(values->objectForKey("Position") != NULL
-           && isKindOfClass(values->objectForKey("Position"), TMPPoint))
-        {
-            pos.x =  ((TMPPoint*)values->objectForKey("Position"))->x;
-            pos.y =  ((TMPPoint*)values->objectForKey("Position"))->y;
-        }
-        if(values->objectForKey("Dimensions") != NULL
-           && isKindOfClass(values->objectForKey("Dimensions"), Size)
-           &&values->objectForKey("TextFormat") != NULL
-           && isKindOfClass(values->objectForKey("TextFormat"), CCInteger))
-        {
-            label = new LabelTTF(((CCString*)values->objectForKey("Label"))->getCString(),
-                                 ((CCString*)values->objectForKey("FontFile"))->getCString(),
-                                 pos,
-                                 *(Size*)(values->objectForKey("Dimensions")),
-                                 (TextHAlignment)((CCInteger*)values->objectForKey("TextFormat"))->getValue());
-        }
-        else if(values->objectForKey("Dimensions") != NULL
-                && isKindOfClass(values->objectForKey("Dimensions"), Size))
-        {
-            label = new LabelTTF(((CCString*)values->objectForKey("Label"))->getCString(),
-                                 ((CCString*)values->objectForKey("FontFile"))->getCString(),
-                                 pos,
-                                 *(Size*)(values->objectForKey("Dimensions")));
-        }
-        else
-        {
-            label = new LabelTTF(((CCString*)values->objectForKey("Label"))->getCString(),
-                                 ((CCString*)values->objectForKey("FontFile"))->getCString(),
-                                 pos);
-        }
-        
-        
-        if(label != NULL)
-        {
-            if(values->objectForKey("Zindex") != NULL && isKindOfClass(values->objectForKey("Zindex"), CCInteger))
-            {
-                this->addObject(label, ((CCInteger*)values->objectForKey("Zindex"))->getValue());
-            }
-            else
-            {
-                this->addObject(label);
-            }
-            label->release();
-            
-            //try to process optional parameters if they exist : Name (String), EventName (String)  Panel (Panel)
-            if(values->objectForKey("Name") != NULL && isKindOfClass(values->objectForKey("Name"), CCString))
-            {
-                label->setName(((CCString*)values->objectForKey("Name"))->getCString());
-            }
-            if(values->objectForKey("EventName") != NULL && isKindOfClass(values->objectForKey("EventName"), CCString))
-            {
-                label->setEventName(((CCString*)values->objectForKey("EventName"))->getCString());
-            }
-            if(values->objectForKey("Scale") != NULL && isKindOfClass(values->objectForKey("Scale"), CCFloat))
-            {
-                label->setScale(((CCFloat*)values->objectForKey("Scale"))->getValue());
-            }
-            if(values->objectForKey("EventInfos") != NULL && isKindOfClass(values->objectForKey("EventInfos"), CCDictionary))
-            {
-                CCDictionary* parameters = (CCDictionary*)values->objectForKey("EventInfos");
-                CCArray* keys = parameters->allKeys();
-                for(int i = 0; i < keys->count(); i++)
-                {
-                    std::string key = ((CCString*)keys->objectAtIndex(i))->_string;
-                    label->setEventInfo(parameters->objectForKey(key), key);
-                }
-            }
-            
-            if(values->objectForKey("Panel") != NULL && isKindOfClass(values->objectForKey("Panel"), Panel))
-            {
-#if VERBOSE_WARNING
-                if(values->objectForKey("Zindex") != NULL && isKindOfClass(values->objectForKey("Zindex"), CCInteger))
-                {
-                    CCLOG("Warning : try to add image in a Panel with a Zindex : currently, depth is not supported in panels");
-                }
-#endif
-                this->placeObject(label, (Panel*)values->objectForKey("Panel"));
-            }
-            if(values->objectForKey("Visible") != NULL && isKindOfClass(values->objectForKey("Visible"), CCInteger))
-            {
-                label->setVisible(((CCInteger*)values->objectForKey("Visible"))->getValue());
-            }
-            if(values->objectForKey("Opacity") != NULL && isKindOfClass(values->objectForKey("Opacity"), CCInteger))
-            {
-                ((CCLabelBMFont*)label->getNode())->setOpacity(((CCInteger*)values->objectForKey("Opacity"))->getValue());
-            }
-            if(values->objectForKey("Help") != NULL && isKindOfClass(values->objectForKey("Help"), CCString))
-            {
-                label->setHelp(((CCString*)values->objectForKey("Help"))->getCString());
-            }
-        }
-#if VERBOSE_WARNING
-        else
-        {
-            CCLOG("Warning : error creating labelTTF with font %s, perhaps the file name is incorrect or the file is too large", ((CCString*)values->objectForKey("FontFile"))->getCString());
-        }
-#endif
-    }
-#if VERBOSE_WARNING
-    else
-    {
-        CCLOG("Warning : createLabelTTF aborted, incorrect parameter types");
-    }
-#endif
-#if VERBOSE_LOAD_CCB
-    CCLOG("Ended creating labelTTF");
-#endif
-    return label;
-}
-
 LabelTTF* GraphicLayer::createLabelTTFromLabel(Label* cocosLabel, Panel* parent)
 {
-    LabelTTF* label = NULL;
-    label = new LabelTTF(cocosLabel);
-    if(label != NULL)
+    LabelTTF* obj = new LabelTTF(cocosLabel);
+    if(obj != NULL)
     {
-        storedObjects->addObject(label);
+        storedObjects->addObject(obj);
         if(parent != NULL)
         {
-            parent->addChild(label);
-            childParent->setObject(parent, label->getID());
+            parent->addChild(obj);
+            childsParents[obj->getID()] = parent;
         }
-        label->release();
+        obj->release();
     }
-    this->loadBaseNodeAttributes(dynamic_cast<CustomBaseNode*>(cocosLabel), label);
-    return label;
+    this->loadBaseNodeAttributes(dynamic_cast<CustomBaseNode*>(cocosLabel), obj);
+    return obj;
 }
-
-
-InputLabel* GraphicLayer::createInputLabel(Ref* firstObject, ... )
-{
-    Ref* eachObject;
-    va_list argumentList;
-    bool key = true;
-    Ref* object;
-    if (firstObject)                      // The first argument isn't part of the varargs list,
-    {                                   // so we'll handle it separately.
-        //put all parameters in a Dictionary to access them as key/value pairs
-        CCDictionary* values = CCDictionary::create();
-        object = firstObject;
-        va_start(argumentList, firstObject);          // Start scanning for arguments after firstObject.
-        while ((eachObject = va_arg(argumentList, Ref*)) != NULL) // As many times as we can get an argument of type "id"
-        {
-            if(key)
-            {
-                //keys should be Strings
-                if(!isKindOfClass(eachObject, CCString))
-                {
-#if VERBOSE_WARNING
-                    CCLOG("Warning : not a key, value ignored");
-#endif
-                }
-                else
-                {
-                    CCString* key = (CCString*)eachObject;
-                    values->setObject(object, key->_string);
-                }
-            }
-            else
-            {
-                object = eachObject;
-            }
-            key = !key;
-        }
-        va_end(argumentList);
-        return this->createInputLabel(values);
-    }
-#if VERBOSE_WARNING
-    else
-    {
-        CCLOG("Warning : createInputLabel called with no firstObject");
-    }
-#endif
-    return NULL;
-}
-
-InputLabel* GraphicLayer::createInputLabel(CCDictionary* values)
-{
-    InputLabel* label = NULL;
-    
-    //try to create an input label : each value is checked : if it exists and if it is of the right type
-    if(values->objectForKey("PlaceHolder") != NULL
-       && isKindOfClass(values->objectForKey("PlaceHolder"), CCString)
-       && values->objectForKey("FontFile") != NULL
-       && isKindOfClass(values->objectForKey("FontFile"), CCString)
-       && values->objectForKey("FontSize") != NULL
-       && isKindOfClass(values->objectForKey("FontSize"), CCInteger))
-    {
-#if VERBOSE_LOAD_CCB
-        CCLOG("creating input label %s", ((CCString*)values->objectForKey("PlaceHolder"))->getCString());
-#endif
-        Vec2 pos = Vec2(0, 0);
-        if(values->objectForKey("PositionX") != NULL
-           && isKindOfClass(values->objectForKey("PositionX"), CCInteger))
-        {
-            pos.x = ((CCInteger*)values->objectForKey("PositionX"))->getValue();
-        }
-        if(values->objectForKey("PositionY") != NULL
-           && isKindOfClass(values->objectForKey("PositionY"), CCInteger))
-        {
-            pos.y =  ((CCInteger*)values->objectForKey("PositionY"))->getValue();
-        }
-        if(values->objectForKey("Position") != NULL
-           && isKindOfClass(values->objectForKey("Position"), TMPPoint))
-        {
-            pos.x =  ((TMPPoint*)values->objectForKey("Position"))->x;
-            pos.y =  ((TMPPoint*)values->objectForKey("Position"))->y;
-        }
-        
-        ui::EditBox::InputMode inputMode = values->objectForKey("KeyboardType") != NULL && isKindOfClass(values->objectForKey("KeyboardType"), CCInteger) ? (ui::EditBox::InputMode)TOINT(values->objectForKey("KeyboardType")) : ui::EditBox::InputMode::ANY;
-        int maxDigits = values->objectForKey("MaxDigits") != NULL && isKindOfClass(values->objectForKey("MaxDigits"), CCInteger) ? TOINT(values->objectForKey("MaxDigits")) : -1;
-        if(values->objectForKey("Dimensions") != NULL
-           && isKindOfClass(values->objectForKey("Dimensions"), Size)
-           &&values->objectForKey("TextFormat") != NULL
-           && isKindOfClass(values->objectForKey("TextFormat"), CCInteger))
-        {
-            label = new InputLabel(((CCString*)values->objectForKey("PlaceHolder"))->getCString(),
-                                   ((CCString*)values->objectForKey("FontFile"))->getCString(),
-                                   TOINT(values->objectForKey("FontSize")),
-                                   pos,
-                                   inputMode,
-                                   maxDigits,
-                                   *(Size*)(values->objectForKey("Dimensions")),
-                                   (TextHAlignment)TOINT(values->objectForKey("TextFormat")));
-        }
-        else if(values->objectForKey("Dimensions") != NULL
-                && isKindOfClass(values->objectForKey("Dimensions"), Size))
-        {
-            label = new InputLabel(((CCString*)values->objectForKey("PlaceHolder"))->getCString(),
-                                   ((CCString*)values->objectForKey("FontFile"))->getCString(),
-                                   TOINT(values->objectForKey("FontSize")),
-                                   pos,
-                                   inputMode,
-                                   maxDigits,
-                                   *(Size*)(values->objectForKey("Dimensions")));
-        }
-        else
-        {
-            label = new InputLabel(((CCString*)values->objectForKey("PlaceHolder"))->getCString(),
-                                   ((CCString*)values->objectForKey("FontFile"))->getCString(),
-                                   TOINT(values->objectForKey("FontSize")),
-                                   pos);
-        }
-        
-        
-        if(label != NULL)
-        {
-            if(values->objectForKey("Zindex") != NULL && isKindOfClass(values->objectForKey("Zindex"), CCInteger))
-            {
-                this->addObject(label, ((CCInteger*)values->objectForKey("Zindex"))->getValue());
-            }
-            else
-            {
-                this->addObject(label);
-            }
-            label->release();
-            
-            //try to process optional parameters if they exist : Label (String), Name (String), EventName (String)  Panel (Panel)
-            if(values->objectForKey("Label") != NULL && isKindOfClass(values->objectForKey("Label"), CCString))
-            {
-                label->setLabelValue(((CCString*)values->objectForKey("Label"))->getCString());
-            }
-            if(values->objectForKey("Name") != NULL && isKindOfClass(values->objectForKey("Name"), CCString))
-            {
-                label->setName(((CCString*)values->objectForKey("Name"))->getCString());
-            }
-            if(values->objectForKey("EventName") != NULL && isKindOfClass(values->objectForKey("EventName"), CCString))
-            {
-                label->setEventName(((CCString*)values->objectForKey("EventName"))->getCString());
-            }
-            if(values->objectForKey("Scale") != NULL && isKindOfClass(values->objectForKey("Scale"), CCFloat))
-            {
-                label->setScale(((CCFloat*)values->objectForKey("Scale"))->getValue());
-            }
-            if(values->objectForKey("EventInfos") != NULL && isKindOfClass(values->objectForKey("EventInfos"), CCDictionary))
-            {
-                CCDictionary* parameters = (CCDictionary*)values->objectForKey("EventInfos");
-                CCArray* keys = parameters->allKeys();
-                for(int i = 0; i < keys->count(); i++)
-                {
-                    std::string key = ((CCString*)keys->objectAtIndex(i))->_string;
-                    label->setEventInfo(parameters->objectForKey(key), key);
-                }
-            }
-            
-            if(values->objectForKey("Panel") != NULL && isKindOfClass(values->objectForKey("Panel"), Panel))
-            {
-#if VERBOSE_WARNING
-                if(values->objectForKey("Zindex") != NULL && isKindOfClass(values->objectForKey("Zindex"), CCInteger))
-                {
-                    CCLOG("Warning : try to add image in a Panel with a Zindex : currently, depth is not supported in panels");
-                }
-#endif
-                this->placeObject(label, (Panel*)values->objectForKey("Panel"));
-            }
-            if(values->objectForKey("Visible") != NULL && isKindOfClass(values->objectForKey("Visible"), CCInteger))
-            {
-                label->setVisible(((CCInteger*)values->objectForKey("Visible"))->getValue());
-            }
-            if(values->objectForKey("Opacity") != NULL && isKindOfClass(values->objectForKey("Opacity"), CCInteger))
-            {
-                ((CCLabelBMFont*)label->getNode())->setOpacity(((CCInteger*)values->objectForKey("Opacity"))->getValue());
-            }
-            if(values->objectForKey("Help") != NULL && isKindOfClass(values->objectForKey("Help"), CCString))
-            {
-                label->setHelp(((CCString*)values->objectForKey("Help"))->getCString());
-            }
-            label->update(0);//used to apply text change right now so that the label is resized correctly right now
-        }
-#if VERBOSE_WARNING
-        else
-        {
-            CCLOG("Warning : error creating label with fontfile %s, perhaps the file name is incorrect or the file is too large", ((CCString*)values->objectForKey("FontFile"))->getCString());
-        }
-#endif
-    }
-#if VERBOSE_WARNING
-    else
-    {
-        CCLOG("Warning : createInputLabel aborted, incorrect parameter types");
-    }
-#endif
-#if VERBOSE_LOAD_CCB
-    CCLOG("ended creating InputLabel");
-#endif
-    return label;
-}
-
 
 InputLabel* GraphicLayer::createInputLabelFromScale9Sprite(ui::Scale9Sprite* cocosSprite, Panel* parent)
 {
-    InputLabel* label = NULL;
-    
-    //ui::EditBoxInputMode inputMode = /*(ui::EditBoxInputMode)TOINT(values->objectForKey("KeyboardType"))*/ kui::EditBoxInputModeAny;
-    //int maxDigits = values->objectForKey("MaxDigits") != NULL && isKindOfClass(values->objectForKey("MaxDigits"), CCInteger) ? TOINT(values->objectForKey("MaxDigits")) : -1;
-    label = new InputLabel(cocosSprite);
-    
-    if(label != NULL)
+    InputLabel* obj = new InputLabel(cocosSprite);
+    if(obj != NULL)
     {
         //TODO : find a way to add the label at the right place in cocos hierarchy
         if(parent != NULL)
         {
-            storedObjects->addObject(label);
-            parent->addChild(label);
-            childParent->setObject(parent, label->getID());
+            storedObjects->addObject(obj);
+            parent->addChild(obj);
+            childsParents[obj->getID()] = parent;
         }
         else
         {
-            this->addObject(label);
+            this->addObject(obj);
         }
-        label->release();
+        obj->release();
     }
-    this->loadBaseNodeAttributes(dynamic_cast<CustomBaseNode*>(cocosSprite), label);
+    this->loadBaseNodeAttributes(dynamic_cast<CustomBaseNode*>(cocosSprite), obj);
     
-    return label;
+    return obj;
 }
 
-Panel* GraphicLayer::createPanel(Ref* firstObject, ... )
-{
-    Ref* eachObject;
-    va_list argumentList;
-    bool key = true;
-    Ref* object;
-    if (firstObject)                      // The first argument isn't part of the varargs list,
-    {                                   // so we'll handle it separately.
-        //put all parameters in a Dictionary to access them as key/value pairs
-        CCDictionary* values = CCDictionary::create();
-        object = firstObject;
-        va_start(argumentList, firstObject);          // Start scanning for arguments after firstObject.
-        while ((eachObject = va_arg(argumentList, Ref*)) != NULL) // As many times as we can get an argument of type "id"
-        {
-            if(key)
-            {
-                //keys should be Strings
-                if(!isKindOfClass(eachObject, CCString))
-                {
-#if VERBOSE_WARNING
-                    CCLOG("Warning : not a key, value ignored");
-#endif
-                }
-                else
-                {
-                    CCString* key = (CCString*)eachObject;
-                    values->setObject(object, key->_string);
-                }
-            }
-            else
-            {
-                object = eachObject;
-            }
-            key = !key;
-        }
-        va_end(argumentList);
-        return this->createPanel(values);
-    }
-#if VERBOSE_WARNING
-    else
-    {
-        CCLOG("Warning : createPanel called with no firstObject");
-    }
-#endif
-    return NULL;
-}
-
-Panel* GraphicLayer::createPanel(CCDictionary* values)
+Panel* GraphicLayer::createPanel(std::string name, ValueMap values)
 {
     
-    Panel* panel = NULL;
-    
-    if(values->objectForKey("Name") != NULL
-       && isKindOfClass(values->objectForKey("Name"), CCString))
+#if VERBOSE_LOAD_CCB
+    log("Creating Panel %s", name.c_str());
+#endif
+    Panel* obj = new Panel(name, getPos(values));
+    if(obj != NULL)
     {
-        Vec2 pos = Vec2(0, 0);
-        if(values->objectForKey("PositionX") != NULL
-           && isKindOfClass(values->objectForKey("PositionX"), CCInteger))
-        {
-            pos.x = ((CCInteger*)values->objectForKey("PositionX"))->getValue();
-        }
-        if(values->objectForKey("PositionY") != NULL
-           && isKindOfClass(values->objectForKey("PositionY"), CCInteger))
-        {
-            pos.y =  ((CCInteger*)values->objectForKey("PositionY"))->getValue();
-        }
-        if(values->objectForKey("Position") != NULL
-           && isKindOfClass(values->objectForKey("Position"), TMPPoint))
-        {
-            pos.x =  ((TMPPoint*)values->objectForKey("Position"))->x;
-            pos.y =  ((TMPPoint*)values->objectForKey("Position"))->y;
-        }
-        panel = new Panel(((CCString*)values->objectForKey("Name"))->getCString(), pos);
-        
-        
-        if(panel != NULL)
-        {
-            if(values->objectForKey("Zindex") != NULL && isKindOfClass(values->objectForKey("Zindex"), CCInteger))
-            {
-                this->addObject(panel, ((CCInteger*)values->objectForKey("Zindex"))->getValue());
-            }
-            else
-            {
-                this->addObject(panel);
-            }
-            panel->release();
-            
-            //try to process optional parameters if they exist : EventName (String)  Panel (Panel)
-            if(values->objectForKey("EventName") != NULL && isKindOfClass(values->objectForKey("EventName"), CCString))
-            {
-                panel->setEventName(((CCString*)values->objectForKey("EventName"))->getCString());
-            }
-            if(values->objectForKey("Scale") != NULL && isKindOfClass(values->objectForKey("Scale"), CCFloat))
-            {
-                panel->setScale(((CCFloat*)values->objectForKey("Scale"))->getValue());
-            }
-            if(values->objectForKey("EventInfos") != NULL && isKindOfClass(values->objectForKey("EventInfos"), CCDictionary))
-            {
-                CCDictionary* parameters = (CCDictionary*)values->objectForKey("EventInfos");
-                CCArray* keys = parameters->allKeys();
-                for(int i = 0; i < keys->count(); i++)
-                {
-                    std::string key = ((CCString*)keys->objectAtIndex(i))->_string;
-                    panel->setEventInfo(parameters->objectForKey(key), key);
-                }
-            }
-            
-            if(values->objectForKey("Panel") != NULL && isKindOfClass(values->objectForKey("Panel"), Panel))
-            {
-#if VERBOSE_WARNING
-                if(values->objectForKey("Zindex") != NULL && isKindOfClass(values->objectForKey("Zindex"), CCInteger))
-                {
-                    CCLOG("Warning : try to add image in a Panel with a Zindex : currently, depth is not supported in panels");
-                }
-#endif
-                this->placeObject(panel, (Panel*)values->objectForKey("Panel"));
-            }
-            if(values->objectForKey("Visible") != NULL && isKindOfClass(values->objectForKey("Visible"), CCInteger))
-            {
-                panel->setVisible(((CCInteger*)values->objectForKey("Visible"))->getValue());
-            }
-            /*if(values->objectForKey("Opacity") != NULL && isKindOfClass(values->objectForKey("Opacity"), CCInteger))
-             {
-             ((Sprite*)img->getNode())->setOpacity(((CCInteger*)values->objectForKey("Opacity"))->getValue());
-             }*/
-            if(values->objectForKey("Help") != NULL && isKindOfClass(values->objectForKey("Help"), CCString))
-            {
-                panel->setHelp(((CCString*)values->objectForKey("Help"))->getCString());
-            }
-        }
-#if VERBOSE_WARNING
-        else
-        {
-            CCLOG("Warning : error creating panel with name %s", ((CCString*)values->objectForKey("Name"))->getCString());
-        }
-#endif
+        this->addObject(obj, getZindex(values));
+        obj->release();
+        setObjectFields(obj, values);
     }
-#if VERBOSE_WARNING
     else
     {
-        CCLOG("Warning : createPanel aborted, incorrect parameter types");
-    }
+#if VERBOSE_WARNING
+        log("Warning : error creating Panel %s", name.c_str());
 #endif
-    return panel;
+    }
+#if VERBOSE_LOAD_CCB
+    log("Ended creating Panel");
+#endif
+    return obj;
 }
 
 Panel* GraphicLayer::createPanelFromNode(Node* cocosNode, Panel* parent)
 {
-    Panel* panel = NULL;
-    panel = new Panel(cocosNode);
-    if(panel != NULL)
+    Panel* obj = new Panel(cocosNode);
+    if(obj != NULL)
     {
-        storedObjects->addObject(panel);
-        storedPanels->addObject(panel);
+        storedObjects->addObject(obj);
+        storedPanels->addObject(obj);
         if(parent != NULL)
         {
-            parent->addChild(panel);
-            childParent->setObject(parent, panel->getID());
+            parent->addChild(obj);
+            childsParents[obj->getID()] = parent;
         }
-        panel->release();
+        obj->release();
     }
-    this->loadBaseNodeAttributes(dynamic_cast<CustomBaseNode*>(cocosNode), panel);
-    loadNodeToFenneX(panel->getNode(), panel);
-    return panel;
+    this->loadBaseNodeAttributes(dynamic_cast<CustomBaseNode*>(cocosNode), obj);
+    loadNodeToFenneX(obj->getNode(), obj);
+    return obj;
 }
 
-Panel* GraphicLayer::createPanelWithNode(const char* name, Node* panelNode, int zOrder)
+Panel* GraphicLayer::createPanelWithNode(std::string name, Node* panelNode, int zOrder)
 {
-    Panel* panel = NULL;
-    panel = new Panel(panelNode, name);
-    if(panel != NULL)
+    Panel* obj = new Panel(panelNode, name);
+    if(obj != NULL)
     {
-        this->addObject(panel, zOrder);
-        panel->release();
+        this->addObject(obj, zOrder);
+        obj->release();
     }
-    return panel;
-}
-
-DropDownList* GraphicLayer::createDropDownList(Ref* firstObject, ... )
-{
-    Ref* eachObject;
-    va_list argumentList;
-    bool key = true;
-    Ref* object;
-    if (firstObject)                      // The first argument isn't part of the varargs list,
-    {                                   // so we'll handle it separately.
-        //put all parameters in a Dictionary to access them as key/value pairs
-        CCDictionary* values = CCDictionary::create();
-        object = firstObject;
-        va_start(argumentList, firstObject);          // Start scanning for arguments after firstObject.
-        while ((eachObject = va_arg(argumentList, Ref*)) != NULL) // As many times as we can get an argument of type "id"
-        {
-            if(key)
-            {
-                //keys should be Strings
-                if(!isKindOfClass(eachObject, CCString))
-                {
-#if VERBOSE_WARNING
-                    CCLOG("Warning : not a key, value ignored");
-#endif
-                }
-                else
-                {
-                    CCString* key = (CCString*)eachObject;
-                    values->setObject(object, key->_string);
-                }
-            }
-            else
-            {
-                object = eachObject;
-            }
-            key = !key;
-        }
-        va_end(argumentList);
-        return this->createDropDownList(values);
-    }
-#if VERBOSE_WARNING
-    else
-    {
-        CCLOG("Warning : createDropDownList called with no firstObject");
-    }
-#endif
-    return NULL;
-}
-
-DropDownList* GraphicLayer::createDropDownList(CCDictionary* values)
-{
-    DropDownList* dropDownList = NULL;
-    
-    //try to create an image : each value is checked : if it exists and if it is of the right type
-    //an image should have at least an ImageFile (String) or ImageData and cocosName (String) for texture
-    if((values->objectForKey("SpriteSheetFile") != NULL
-        &&  isKindOfClass(values->objectForKey("SpriteSheetFile"), CCString)
-        && values->objectForKey("Capacity") != NULL
-        &&  isKindOfClass(values->objectForKey("Capacity"), CCInteger)))
-    {
-        Vec2 pos = Vec2(0, 0);
-        if(values->objectForKey("PositionX") != NULL
-           && isKindOfClass(values->objectForKey("PositionX"), CCInteger))
-        {
-            pos.x = ((CCInteger*)values->objectForKey("PositionX"))->getValue();
-        }
-        if(values->objectForKey("PositionY") != NULL
-           && isKindOfClass(values->objectForKey("PositionY"), CCInteger))
-        {
-            pos.y =  ((CCInteger*)values->objectForKey("PositionY"))->getValue();
-        }
-        if(values->objectForKey("Position") != NULL
-           && isKindOfClass(values->objectForKey("Position"), TMPPoint))
-        {
-            pos.x =  ((TMPPoint*)values->objectForKey("Position"))->x;
-            pos.y =  ((TMPPoint*)values->objectForKey("Position"))->y;
-        }
-        if(values->objectForKey("ImageFile") != NULL
-           && isKindOfClass(values->objectForKey("ImageFile"), CCString))
-        {
-#if VERBOSE_LOAD_CCB
-            CCLOG("creating DropDownList %s", ((CCString*)values->objectForKey("ImageFile"))->getCString());
-#endif
-            dropDownList = new DropDownList(((CCString*)values->objectForKey("ImageFile"))->getCString(), pos);
-        }
-        else
-        {
-            dropDownList = new DropDownList(((CCString*)values->objectForKey("SpriteSheetFile"))->getCString(), pos, ((CCInteger*)values->objectForKey("Capacity"))->getValue());
-        }
-        
-        
-        if(dropDownList != NULL)
-        {
-            if(values->objectForKey("Zindex") != NULL && isKindOfClass(values->objectForKey("Zindex"), CCInteger))
-            {
-                this->addObject(dropDownList, ((CCInteger*)values->objectForKey("Zindex"))->getValue());
-            }
-            else
-            {
-                this->addObject(dropDownList);
-            }
-            dropDownList->release();
-            
-            //try to process optional parameters if they exist : Name (String), EventName (String)  Panel (Panel)
-            if(values->objectForKey("Name") != NULL && isKindOfClass(values->objectForKey("Name"), CCString))
-            {
-                dropDownList->setName(((CCString*)values->objectForKey("Name"))->getCString());
-            }
-            if(values->objectForKey("EventName") != NULL && isKindOfClass(values->objectForKey("EventName"), CCString))
-            {
-                dropDownList->setEventName(((CCString*)values->objectForKey("EventName"))->getCString());
-            }
-            if(values->objectForKey("Scale") != NULL && isKindOfClass(values->objectForKey("Scale"), CCFloat))
-            {
-                dropDownList->setScale(((CCFloat*)values->objectForKey("Scale"))->getValue());
-            }
-            if(values->objectForKey("EventInfos") != NULL && isKindOfClass(values->objectForKey("EventInfos"), CCDictionary))
-            {
-                CCDictionary* parameters = (CCDictionary*)values->objectForKey("EventInfos");
-                CCArray* keys = parameters->allKeys();
-                for(int i = 0; i < keys->count(); i++)
-                {
-                    std::string key = ((CCString*)keys->objectAtIndex(i))->_string;
-                    dropDownList->setEventInfo(parameters->objectForKey(key), key);
-                }
-            }
-            
-            if(values->objectForKey("Panel") != NULL && isKindOfClass(values->objectForKey("Panel"), Panel))
-            {
-#if VERBOSE_WARNING
-                if(values->objectForKey("Zindex") != NULL && isKindOfClass(values->objectForKey("Zindex"), CCInteger))
-                {
-                    CCLOG("Warning : try to add image in a Panel with a Zindex : currently, depth is not supported in panels");
-                }
-#endif
-                this->placeObject(dropDownList, (Panel*)values->objectForKey("Panel"));
-            }
-            if(values->objectForKey("Visible") != NULL && isKindOfClass(values->objectForKey("Visible"), CCInteger))
-            {
-                dropDownList->setVisible(((CCInteger*)values->objectForKey("Visible"))->getValue());
-            }
-            if(values->objectForKey("Opacity") != NULL && isKindOfClass(values->objectForKey("Opacity"), CCInteger))
-            {
-                ((Sprite*)dropDownList->getNode())->setOpacity(((CCInteger*)values->objectForKey("Opacity"))->getValue());
-            }
-            if(values->objectForKey("Help") != NULL && isKindOfClass(values->objectForKey("Help"), CCString))
-            {
-                dropDownList->setHelp(((CCString*)values->objectForKey("Help"))->getCString());
-            }
-        }
-    }
-#if VERBOSE_WARNING
-    else
-    {
-        CCLOG("Warning : createDropDownList aborted, incorrect parameter types");
-    }
-#endif
-#if VERBOSE_LOAD_CCB
-    CCLOG("Ended creating DropDownList");
-#endif
-    return dropDownList;
+    return obj;
 }
 
 DropDownList* GraphicLayer::createDropDownListFromSprite(Sprite* sprite, Panel* parent)
 {
-    DropDownList* dropDownList = NULL;
-    dropDownList = new DropDownList(sprite);
-    if(dropDownList != NULL)
+    DropDownList* obj = new DropDownList(sprite);
+    if(obj != NULL)
     {
-        storedObjects->addObject(dropDownList);
+        storedObjects->addObject(obj);
         if(parent != NULL)
         {
-            parent->addChild(dropDownList);
-            childParent->setObject(parent, dropDownList->getID());
+            parent->addChild(obj);
+            childsParents[obj->getID()] = parent;
         }
-        dropDownList->release();
+        obj->release();
     }
-    this->loadBaseNodeAttributes(dynamic_cast<CustomBaseNode*>(sprite), dropDownList);
-    return dropDownList;
+    this->loadBaseNodeAttributes(dynamic_cast<CustomBaseNode*>(sprite), obj);
+    return obj;
 }
 
 RawObject* GraphicLayer::duplicateObject(RawObject* otherObject)
@@ -1311,7 +400,7 @@ RawObject* GraphicLayer::duplicateObject(RawObject* otherObject)
         if(otherImage->isAnimation())
         {
 #if VERBOSE_WARNING
-            CCLOG("Warning: animated Image not supported for duplicate yet");
+            log("Warning: animated Image not supported for duplicate yet");
 #endif
             return NULL;
         }
@@ -1347,7 +436,7 @@ RawObject* GraphicLayer::duplicateObject(RawObject* otherObject)
     else
     {
 #if VERBOSE_WARNING
-        CCLOG("Warning: object type not supported for duplicate yet");
+        log("Warning: object type not supported for duplicate yet");
 #endif
         return NULL;
     }
@@ -1399,24 +488,23 @@ RawObject* GraphicLayer::placeObject(RawObject* obj, Panel* panel)
                 storedObjects->removeObject(obj);
                 storedObjects->insertObject(obj, storedObjects->indexOfObject(panel));
                 //TODO : problem with obj zOrder : it does not correspond to panel zOrder
-                childParent->setObject(panel, obj->getID());
+                childsParents[obj->getID()] = panel;
             }
 #if VERBOSE_WARNING
             else
             {
-                CCLOG("Warning : child %s doesn't have a Node, you shouldn't try to place it on a panel", obj->getName().c_str());
+                log("Warning : child %s doesn't have a Node, you shouldn't try to place it on a panel", obj->getName().c_str());
             }
 #endif
         }
     }
     else if(panel != NULL)
     {
-        for(int i = 0; i < objectsToAdd->count(); i++)
+        for(int i = 0; i < objectsToAdd.size(); i++)
         {
-            CCArray* objInfos = (CCArray*)objectsToAdd->objectAtIndex(i);
-            if(objInfos->objectAtIndex(0) == obj)
+            if(objectsToAdd.at(i) == obj)
             {
-                objInfos->addObject(panel);
+                objectsToAddPanel[i] = panel;
             }
         }
     }
@@ -1429,19 +517,13 @@ void GraphicLayer::removeObjectFromPanel(RawObject* obj, Panel* panel)
     {
         panel->removeChild(obj);
         layer->addChild(obj->getNode());
-        if(childParent->objectForKey(obj->getID()) != NULL)
-        {
-            childParent->removeObjectForKey(obj->getID());
-        }
-        else
-        {
-            CCASSERT(1, "Problem with childParent");
-        }
+        CCAssert(childsParents.find(obj->getID()) != childsParents.end(), "Cannot find object inf childsParents");
+        childsParents.erase(obj->getID());
     }
 #if VERBOSE_WARNING
     else
     {
-        CCLOG("Warning : child %s doesn't have a Node, you shouldn't try to remove it from a panel", obj->getName().c_str());
+        log("Warning : child %s doesn't have a Node, you shouldn't try to remove it from a panel", obj->getName().c_str());
     }
 #endif
 }
@@ -1457,18 +539,11 @@ void GraphicLayer::removeAllObjectsFromPanel(Panel* panel)
 Panel* GraphicLayer::getContainingPanel(RawObject* obj)
 {
     if(obj == NULL) return NULL;
-    return (Panel*)childParent->objectForKey(obj->getID());
-    /* OLD unefficient way to get the containing panel by trying all panels
-     Panel* containingPanel = NULL;
-     for(int i = 0; i < storedPanels->count(); i++)
-     {
-     Panel* panel = (Panel*)storedPanels->objectAtIndex(i);
-     if(panel->containsObject(obj))
-     {
-     containingPanel = panel;
-     }
-     }
-     return containingPanel;*/
+    if(childsParents.find(obj->getID()) == childsParents.end())
+    {
+        return NULL;
+    }
+    return childsParents[obj->getID()];
 }
 
 void GraphicLayer::destroyObject(RawObject* obj)
@@ -1477,7 +552,7 @@ void GraphicLayer::destroyObject(RawObject* obj)
     {
         if(isUpdating)
         {
-            objectsToRemove->addObject(obj);
+            objectsToRemove.pushBack(obj);
         }
         else
         {
@@ -1494,8 +569,6 @@ void GraphicLayer::destroyObject(RawObject* obj)
                 storedPanels->removeObject(obj);
                 CCArray* children = ((Panel*)obj)->getChildren();
                 CCASSERT(children == NULL || children->count() == 0, "Problem with panel children when releasing panel");
-                CCArray* keys = childParent->allKeysForObject(obj);
-                CCASSERT(keys == NULL || keys->count() == 0, "Problem with child parent when releasing panel");
             }
             this->placeObject(obj);
             if(obj->getNode() != NULL)
@@ -1509,7 +582,7 @@ void GraphicLayer::destroyObject(RawObject* obj)
     else
     {
 #if VERBOSE_WARNING
-        CCLOG("Warning : trying to destroy not valid object at adress %p", obj);
+        log("Warning : trying to destroy not valid object at adress %p", obj);
 #endif
         if(obj != NULL && storedPanels->containsObject(obj))
         {
@@ -1545,7 +618,7 @@ void GraphicLayer::destroyObjectEvent(EventCustom* event)
 #if VERBOSE_WARNING
         else
         {
-            CCLOG("Warning : sent a non RawObject to destroyObject, ignoring it");
+            log("Warning : sent a non RawObject to destroyObject, ignoring it");
         }
 #endif
     }
@@ -1566,7 +639,7 @@ void GraphicLayer::destroyObjectsEvent(EventCustom* event)
 #if VERBOSE_WARNING
                 else
                 {
-                    CCLOG("Warning : array contains non RawObject in destroyObjects, ignoring that value");
+                    log("Warning : array contains non RawObject in destroyObjects, ignoring that value");
                 }
 #endif
             }
@@ -1574,7 +647,7 @@ void GraphicLayer::destroyObjectsEvent(EventCustom* event)
 #if VERBOSE_WARNING
         else
         {
-            CCLOG("Warning : sent a non CCArray to destroyObjects, ignoring it");
+            log("Warning : sent a non CCArray to destroyObjects, ignoring it");
         }
 #endif
     }
@@ -1587,7 +660,8 @@ void GraphicLayer::clear()
         this->destroyObject((RawObject*)storedObjects->objectAtIndex(0));
     }
     storedPanels->removeAllObjects();
-    childParent->removeAllObjects();
+    childsParents.clear();
+    objectsToRemove.clear();
     nextAvailableId = 0;
 }
 
@@ -1602,12 +676,6 @@ RawObject* GraphicLayer::getById(int id)
         }
     }
     return NULL;
-}
-
-
-RawObject* GraphicLayer::firstObjectWithName(CCString* name, bool cache)
-{
-    return this->firstObjectWithName(name->getCString());
 }
 
 RawObject* GraphicLayer::firstObjectWithName(std::string name, bool cache)
@@ -1671,62 +739,25 @@ RawObject* GraphicLayer::firstObjectAtPosition(Vec2 position)
     return result;
 }
 
-RawObject* GraphicLayer::firstObjectInRect(Rect rect)
-{
-    RawObject* result = NULL;
-    for(int i =  storedObjects->count() - 1; i >= 0  && result == NULL; i--)
-    {
-        RawObject* obj = (RawObject*)storedObjects->objectAtIndex(i);
-        Rect realRect = rect;
-        realRect.origin = this->getPositionRelativeToObject(rect.origin, obj);
-        if(obj->collision(realRect))
-        {
-            result = obj;
-        }
-    }
-    return result;
-}
-
-RawObject* GraphicLayer::firstObjectContainingRect(Rect rect)
-{
-    RawObject* result = NULL;
-    for(int i =  storedObjects->count() - 1; i >= 0  && result == NULL; i--)
-    {
-        RawObject* obj = (RawObject*)storedObjects->objectAtIndex(i);
-        Rect realRect = rect;
-        realRect.origin = this->getPositionRelativeToObject(rect.origin, obj);
-        if(obj->containsRect(realRect))
-        {
-            result = obj;
-        }
-    }
-    return result;
-}
-
 RawObject* GraphicLayer::objectAtIndex(int index)
 {
     CCAssert(index >= 0, "in GraphicLayer objectAtIndex : invalid index, it should be positive");
-    CCAssert(index < this->count(), "in GraphicLayer objectAtIndex : invalid index, it should be inferior to count");
+    CCAssert(index < storedObjects->count(), "in GraphicLayer objectAtIndex : invalid index, it should be inferior to count");
     return (RawObject*)storedObjects->objectAtIndex(index);
 }
 
-CCArray* GraphicLayer::allObjectsWithName(CCString* name)
+CCArray* GraphicLayer::allObjectsWithName(std::string name)
 {
     CCArray* result = CCArray::create();
     for(int i =  storedObjects->count() - 1; i >= 0; i--)
     {
         RawObject* obj = (RawObject*)storedObjects->objectAtIndex(i);
-        if(name->_string == obj->getName())
+        if(name == obj->getName())
         {
             result->addObject(obj);
         }
     }
     return result;
-}
-
-CCArray* GraphicLayer::allObjectsWithName(std::string name)
-{
-    return this->allObjectsWithName(Screate(name));
 }
 
 CCArray* GraphicLayer::allObjectsWithNameInPanel(std::string name, Panel* panel)
@@ -1743,26 +774,6 @@ CCArray* GraphicLayer::allObjectsWithNameInPanel(std::string name, Panel* panel)
     return result;
 }
 
-CCArray* GraphicLayer::allObjectsStartingWithString(CCString* name)
-{
-    CCArray* result = CCArray::create();
-    for(int i =  storedObjects->count() - 1; i >= 0; i--)
-    {
-        RawObject* obj = (RawObject*)storedObjects->objectAtIndex(i);
-        std::string objName = obj->getName();
-        if(objName.compare(0, name->length(), name->getCString()) == 0)
-        {
-            result->addObject(obj);
-        }
-    }
-    return result;
-}
-
-CCArray* GraphicLayer::allObjectsStartingWithString(std::string name)
-{
-    return this->allObjectsStartingWithString(Screate(name));
-}
-
 CCArray* GraphicLayer::allObjectsAtPosition(Vec2 position)
 {
     CCArray* result = CCArray::create();
@@ -1777,87 +788,29 @@ CCArray* GraphicLayer::allObjectsAtPosition(Vec2 position)
     return result;
 }
 
-CCArray* GraphicLayer::allObjectsInRect(Rect rect)
+RawObject* GraphicLayer::first(const std::function<bool(RawObject*)>& filter)
 {
-    CCArray* result = CCArray::create();
+    RawObject* result = NULL;
     for(int i =  storedObjects->count() - 1; i >= 0; i--)
     {
         RawObject* obj = (RawObject*)storedObjects->objectAtIndex(i);
-        Rect realRect = rect;
-        realRect.origin = this->getPositionRelativeToObject(rect.origin, obj);
-        if(obj->collision(realRect))
+        if(filter(obj))
         {
-            result->addObject(obj);
+            result = obj;
         }
     }
     return result;
 }
 
-CCArray* GraphicLayer::allObjectsContainingRect(Rect rect)
+Panel* GraphicLayer::firstPanel(const std::function<bool(Panel*)>& filter)
 {
-    CCArray* result = CCArray::create();
-    for(int i =  storedObjects->count() - 1; i >= 0; i--)
+    Panel* result = NULL;
+    for(int i =  storedPanels->count() - 1; i >= 0; i--)
     {
-        RawObject* obj = (RawObject*)storedObjects->objectAtIndex(i);
-        Rect realRect = rect;
-        realRect.origin = this->getPositionRelativeToObject(rect.origin, obj);
-        if(obj->containsRect(realRect))
+        Panel* obj = (Panel*)storedPanels->objectAtIndex(i);
+        if(filter(obj))
         {
-            result->addObject(obj);
-        }
-    }
-    return result;
-}
-
-CCArray* GraphicLayer::allVisibleObjectsAtPosition(Vec2 position)
-{
-    CCArray* result = CCArray::create();
-    for(int i =  storedObjects->count() - 1; i >= 0; i--)
-    {
-        RawObject* obj = (RawObject*)storedObjects->objectAtIndex(i);
-        if(obj->getNode() != NULL && obj->isVisible() && obj->collision(this->getPositionRelativeToObject(position, obj)))
-        {
-            bool parentVisible = true;
-            RawObject* parent = this->getContainingPanel(obj);
-            while(parent != NULL && parentVisible)
-            {
-                if(parent->getNode() == NULL || !parent->isVisible())
-                {
-                    parentVisible = false;
-                }
-                parent = this->getContainingPanel(parent);
-            }
-            if(parentVisible)
-            {
-                result->addObject(obj);
-            }
-        }
-    }
-    return result;
-}
-
-CCArray* GraphicLayer::allActionnableObjects()
-{
-    CCArray* result = CCArray::create();
-    for(int i =  storedObjects->count() - 1; i >= 0; i--)
-    {
-        RawObject* obj = (RawObject*)storedObjects->objectAtIndex(i);
-        if(obj->getNode() != NULL && obj->isVisible() && !obj->getEventName().empty() && obj->getEventName()[0] != '\0' && obj->getEventActivated())
-        {
-            bool parentVisible = true;
-            RawObject* parent = this->getContainingPanel(obj);
-            while(parent != NULL && parentVisible)
-            {
-                if(parent->getNode() == NULL || !parent->isVisible())
-                {
-                    parentVisible = false;
-                }
-                parent = this->getContainingPanel(parent);
-            }
-            if(parentVisible)
-            {
-                result->addObject(obj);
-            }
+            result = obj;
         }
     }
     return result;
@@ -1901,6 +854,11 @@ bool GraphicLayer::isOnScreen(RawObject* obj, Size size)
     return false;
 }
 
+bool GraphicLayer::isInFront(RawObject* obj1, RawObject* obj2)
+{
+    storedObjects->indexOfObject(obj1) < storedObjects->indexOfObject(obj2);
+}
+
 bool GraphicLayer::containsObject(RawObject* obj)
 {
     return storedObjects->containsObject(obj);
@@ -1908,16 +866,11 @@ bool GraphicLayer::containsObject(RawObject* obj)
 
 CCArray* GraphicLayer::allPanelsWithName(std::string name)
 {
-    return allObjectsWithName(Screate(name));
-}
-
-CCArray* GraphicLayer::allPanelsWithName(CCString* name)
-{
     CCArray* result = CCArray::create();
     for(int i =  storedPanels->count() - 1; i >= 0; i--)
     {
         Panel* obj = (Panel*)storedPanels->objectAtIndex(i);
-        if(name->_string == obj->getName() && storedObjects->containsObject(obj))
+        if(name == obj->getName() && storedObjects->containsObject(obj))
         {
             result->addObject(obj);
         }
@@ -1927,30 +880,11 @@ CCArray* GraphicLayer::allPanelsWithName(CCString* name)
 
 Panel* GraphicLayer::firstPanelWithName(std::string name)
 {
-    return this->firstPanelWithName(Screate(name));
-}
-
-Panel* GraphicLayer::firstPanelWithName(CCString* name)
-{
     Panel* result = NULL;
     for(int i =  storedPanels->count() - 1; i >= 0  && result == NULL; i--)
     {
         Panel* obj = (Panel*)storedPanels->objectAtIndex(i);
-        if(name->_string == obj->getName() && storedObjects->containsObject(obj))
-        {
-            result = obj;
-        }
-    }
-    return result;
-}
-
-Panel* GraphicLayer::firstVisiblePanelWithName(CCString* name)
-{
-    Panel* result = NULL;
-    for(int i =  storedPanels->count() - 1; i >= 0  && result == NULL; i--)
-    {
-        Panel* obj = (Panel*)storedPanels->objectAtIndex(i);
-        if(name->_string == obj->getName() && obj->isVisible() && storedObjects->containsObject(obj))
+        if(name == obj->getName() && storedObjects->containsObject(obj))
         {
             result = obj;
         }
@@ -2005,6 +939,25 @@ Vec2 GraphicLayer::getCenterRealPosition(RawObject* obj)
     return realPosition;
 }
 
+
+bool GraphicLayer::isWorldVisible(RawObject* obj)
+{
+    if(!obj->isVisible())
+    {
+        return false;
+    }
+    RawObject* parent = GraphicLayer::sharedLayer()->getContainingPanel(obj);
+    while(parent != NULL)
+    {
+        if(parent->getNode() == NULL || !parent->isVisible())
+        {
+            return false;
+        }
+        parent = GraphicLayer::sharedLayer()->getContainingPanel(parent);
+    }
+    return true;
+}
+
 float GraphicLayer::getRealScale(RawObject* obj)
 {
     float realScale = obj->getScale();
@@ -2044,18 +997,18 @@ float GraphicLayer::getRealScaleY(RawObject* obj)
 bool GraphicLayer::touchAtPosition(Vec2 position, bool event)
 {
 #if VERBOSE_GENERAL_INFO
-    CCLOG("Before trying touchAtPosition, obj order :");
+    log("Before trying touchAtPosition, obj order :");
     for(int i =  storedObjects->count() - 1; i >= 0; i--)
     {
         RawObject* obj = (RawObject*)storedObjects->objectAtIndex(i);
-        CCLOG("obj name: %s", obj->getName().c_str());
+        log("obj name: %s", obj->getName().c_str());
     }
 #endif
     for(int i =  storedObjects->count() - 1; i >= 0; i--)
     {
         if(!isKindOfClass(storedObjects->objectAtIndex(i), RawObject))
         {
-            CCLOG("Problem with object at index %d, not a valid RawObject", i);
+            log("Problem with object at index %d, not a valid RawObject", i);
         }
         RawObject* obj = (RawObject*)storedObjects->objectAtIndex(i);
         Node* node = obj->getNode();
@@ -2092,10 +1045,8 @@ bool GraphicLayer::touchObject(RawObject* obj, bool event, Vec2 position)
         {
             CCDictionary* infos = obj->getEventInfos();
             infos->setObject(Pcreate(position), "TouchPosition");
-            IFEXIST(tapObserver)->onButtonTapped(obj, obj->getEventName(), infos);
             Director::getInstance()->getEventDispatcher()->dispatchCustomEvent(obj->getEventName(), infos);
             CCString* trackingName = (CCString*)obj->getEventInfos()->objectForKey("TrackingName");
-            SceneName currentScene = SceneSwitcher::sharedSwitcher()->getCurrentSceneName();
             //In VideoView, buttons are only tracked if the video meet the minimum duration
             if(trackingName != NULL)
             {
@@ -2107,13 +1058,6 @@ bool GraphicLayer::touchObject(RawObject* obj, bool event, Vec2 position)
                 CCString* trackingLabel = (CCString*) obj->getEventInfos()->objectForKey("TrackingLabel");
                 AnalyticsWrapper::logEvent(trackingName->_string, trackingInfo != NULL ? trackingInfo->getCString() : trackingLabel != NULL ? trackingLabel->_string : "");
             }
-        }
-        else if(!obj->getHelp().empty() && obj->getHelp()[0] != '\0')
-        {
-            CCDictionary* helpInfos = CCDictionary::create();
-            helpInfos->setObject(Icreate(obj->getID()), "Sender");
-            helpInfos->setObject(Screate(obj->getHelp()), "RequestedHelp");
-            Director::getInstance()->getEventDispatcher()->dispatchCustomEvent("DisplayHelp", helpInfos);
         }
         return true;
     }
@@ -2144,14 +1088,6 @@ void GraphicLayer::reorderChild(RawObject* child, int zOrder)
     }
 }
 
-void GraphicLayer::reorderChildAfter(RawObject* child, RawObject* otherChild)
-{
-}
-
-void GraphicLayer::reorderChildBefore(RawObject* child, RawObject* otherChild)
-{
-}
-
 void GraphicLayer::reorderChildrenOfPanel(Panel* panel)
 {
     CCArray* alreadyReordered = Acreate();
@@ -2178,53 +1114,6 @@ void GraphicLayer::reorderChildrenOfPanel(Panel* panel)
         }
     }
 }
-/* back up version of the method : scale working properly, position not so much
- void GraphicLayer::applyDisplayScaling(RawObject* obj, DisplayScaling options)
- {
- Size frameSize = Director::getInstance()->getOpenGLView()->getFrameSize();
- float shinzuScale = 1;
- float scaleFactor = Director::getInstance()->getContentScaleFactor();
- Size designSize = Director::getInstance()->getOpenGLView()->getDesignResolutionSize();
- Size usedSize;
- usedSize.width = designSize.width * scaleFactor * shinzuScale;
- usedSize.height = designSize.height * scaleFactor * shinzuScale;
- Vec2 position = obj->getPosition();
- if(options & AnchorLeft && position.x < designSize.width/2)
- {
- position.x -= (frameSize.width - usedSize.width)/2 / (scaleFactor*shinzuScale);
- }
- if(options & AnchorRight && position.x > designSize.width/2)
- {
- position.x += (frameSize.width - usedSize.width)/2 / (scaleFactor*shinzuScale);
- }
- if(options & AnchorTop && position.y > designSize.height/2)
- {
- position.y += (frameSize.height - usedSize.height)/2 / (scaleFactor*shinzuScale);
- }
- if(options & AnchorBottom && position.y < designSize.height/2)
- {
- position.y -= (frameSize.height - usedSize.height)/2 / (scaleFactor*shinzuScale);
- }
- obj->setPosition(position);
- float scale = obj->getScale();
- if(options & FitWidth)
- {
- float newScale = (obj->getSize().width * obj->getScale() + (frameSize.width - usedSize.width))/obj->getSize().width;
- scale = MAX(scale, newScale);
- }
- if(options & FitHeight)
- {
- float newScale = (obj->getSize().height * obj->getScale() + (frameSize.height - usedSize.height))/obj->getSize().height;
- scale = MAX(scale, newScale);
- }
- obj->setScale(scale);
- }*/
-
-/*
- float GraphicLayer::closeMainPanels()
- {
- return 0;
- }*/
 
 void GraphicLayer::addObject(RawObject* obj, int z)
 {
@@ -2232,7 +1121,9 @@ void GraphicLayer::addObject(RawObject* obj, int z)
     {
         if(isUpdating)
         {
-            objectsToAdd->addObject(CCArray::create(obj, Icreate(z), NULL));
+            objectsToAdd.pushBack(obj);
+            objectsToAddZindex.push_back(z);
+            objectsToAddPanel.push_back(NULL);
         }
         else
         {
@@ -2260,7 +1151,7 @@ void GraphicLayer::addObject(RawObject* obj, int z)
 #if VERBOSE_WARNING
             else if(obj->getNode() == NULL)
             {
-                CCLOG("Warning : Child %s doesn't have a Node, it will not be displayed by cocos2d", obj->getName().c_str());
+                log("Warning : Child %s doesn't have a Node, it will not be displayed by cocos2d", obj->getName().c_str());
             }
 #endif
         }
@@ -2268,9 +1159,51 @@ void GraphicLayer::addObject(RawObject* obj, int z)
 #if VERBOSE_WARNING
     else
     {
-        CCLOG("Warning : trying to add a nil object, check if it has been created correctly (in particular if the resource exists)");
+        log("Warning : trying to add a nil object, check if it has been created correctly (in particular if the resource exists)");
     }
 #endif
+}
+
+void GraphicLayer::setObjectFields(RawObject* obj, ValueMap values)
+{
+    if(values.find("Name") != values.end() && values.at("Name").getType() == Value::Type::STRING)
+    {
+        obj->setName(values.at("Name").asString());
+    }
+    if(values.find("EventName") != values.end() && values.at("EventName").getType() == Value::Type::STRING)
+    {
+        obj->setEventName(values.at("EventName").asString());
+    }
+    if(values.find("Scale") != values.end() && values.at("Scale").getType() == Value::Type::FLOAT)
+    {
+        obj->setScale(values.at("Scale").asFloat());
+    }
+    if(values.find("EventInfos") != values.end() && values.at("EventInfos").getType() == Value::Type::MAP)
+    {
+        obj->addEventInfos(values.at("EventInfos").asValueMap());
+    }
+    if(values.find("Panel") != values.end() && values.at("Panel").getType() == Value::Type::INTEGER)
+    {
+#if VERBOSE_WARNING
+        if(values.find("Zindex") != values.end() && values.at("Zindex").getType() == Value::Type::INTEGER)
+        {
+            log("Warning : try to add image in a Panel with a Zindex : currently, depth is not supported in panels");
+        }
+#endif
+        RawObject* target = getById(values.at("Panel").asInt());
+        CCAssert(isKindOfClass(target, Panel), "Trying to place on object on another object which is not a Panel");
+        this->placeObject(obj, (Panel*)target);
+    }
+    if(values.find("Visible") != values.end() && values.at("Visible").getType() == Value::Type::BOOLEAN)
+    {
+        obj->setVisible(values.at("Visible").asBool());
+    }
+    if(values.find("Opacity") != values.end() && values.at("Opacity").getType() == Value::Type::INTEGER)
+    {
+        int opacity = values.at("Opacity").asInt();
+        CCAssert(opacity >= 0 && opacity <= 255, "Invalid opacity value, should range between 0 to 255");
+        obj->getNode()->setOpacity(opacity);
+    }
 }
 
 void GraphicLayer::update(float deltaTime)
@@ -2285,27 +1218,28 @@ void GraphicLayer::update(float deltaTime)
         }
         else
         {
-            CCLOG("Warning: wrong object type in storedObjects");
+            log("Warning: wrong object type in storedObjects");
         }
     }
     isUpdating = false;
-    
-    CCARRAY_FOREACH(objectsToAdd, obj)
+    for(int i = 0; i < objectsToAdd.size(); i++)
     {
-        CCArray* objInfos = (CCArray*)obj;
-        this->addObject((RawObject*)objInfos->objectAtIndex(0), ((CCInteger*)objInfos->objectAtIndex(1))->getValue());
-        if(objInfos->count() > 2)
+        this->addObject(objectsToAdd.at(i), objectsToAddZindex[i]);
+        if(objectsToAddPanel[i] != NULL)
         {
-            this->placeObject((RawObject*)objInfos->objectAtIndex(0), (Panel*)objInfos->objectAtIndex(2));
+            this->placeObject(objectsToAdd.at(i), objectsToAddPanel[i]);
         }
     }
-    objectsToAdd->removeAllObjects();
+    objectsToAdd.clear();
+    objectsToAddZindex.clear();
+    objectsToAddPanel.clear();
     
-    CCARRAY_FOREACH(objectsToAdd, obj)
+    for(RawObject* obj : objectsToRemove)
     {
-        this->destroyObject((RawObject*)obj);
+        this->destroyObject(obj);
+        
     }
-    objectsToRemove->removeAllObjects();
+    objectsToRemove.clear();
     
     clock += deltaTime;
 }
@@ -2330,24 +1264,24 @@ void GraphicLayer::loadBaseNodeAttributes(CustomBaseNode* node, RawObject* obj)
     //Always check for NULL since node is the result of a dynamic cast
     if(node != NULL)
     {
-        if(node->getName() != NULL)
+        if(!node->getName().empty())
         {
 #if VERBOSE_LOAD_CCB
-            CCLOG("setting name : %s", node->getName()->getCString());
+            log("setting name : %s", node->getName().c_str());
 #endif
-            obj->setName(node->getName()->getCString());
+            obj->setName(node->getName());
         }
-        if(node->getEventName() != NULL)
+        if(!node->getEventName().empty())
         {
 #if VERBOSE_LOAD_CCB
-            CCLOG("setting event name : %s", node->getEventName()->getCString());
+            log("setting event name : %s", node->getEventName().c_str());
 #endif
-            obj->setEventName(node->getEventName()->getCString());
+            obj->setEventName(node->getEventName());
         }
         if(node->getScene() != 0)
         {
 #if VERBOSE_LOAD_CCB
-            CCLOG("setting scene : %d", node->getScene());
+            log("setting scene : %d", node->getScene());
 #endif
             obj->setEventInfo(Icreate(node->getScene()), "Scene");
         }

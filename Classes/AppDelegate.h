@@ -44,7 +44,6 @@ public:
     virtual void initGLContextAttrs();
 
     void loadAnalytics();
-    //Do the initializations here instead of applicationDidFinishLaunching so that Android can show a splashscreen during this method
     static void initAppModules();
 
     /**

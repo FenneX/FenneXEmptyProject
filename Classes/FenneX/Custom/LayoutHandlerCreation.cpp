@@ -46,14 +46,6 @@ void LayoutHandler::createSceneGraphics(Scene* target)
     AudioPlayerRecorder::sharedRecorder()->stopPlaying();
 	switch (target->getSceneName())
 	{
-        case SplashScreen:
-        {
-            //Do your splashscreen logic here for Android. If you don't want a splashscreen on Android, modify AppDelegate to skip it
-            //It will stay for 2 seconds, which is more than enough for the initial load
-            DelayedDispatcher::eventAfterDelay("PlanSceneSwitch", DcreateP(Icreate(FIRST_SCENE), Screate("Scene"), NULL), 2);
-        }
-            break;
-            break;
         case Home:
             //Your first scene, do your app logic here
             break;

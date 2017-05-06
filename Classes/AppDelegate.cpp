@@ -166,13 +166,11 @@ bool AppDelegate::applicationDidFinishLaunching()
     // set FPS. the default value is 1.0/60 if you don't call this
     pDirector->setAnimationInterval(1.0 / 60);
     
-    //Run the first scene. On Android, show a custom splashscreen during app modules init. On iOS, the splashscreen will be shown during first frame loading
-#if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
-    SceneSwitcher::sharedSwitcher()->initWithScene(SplashScreen);
-    AppDelegate::initAppModules();
-#else
+    //Run the first scene. The splashscreen is runned outside of OpenGl View. It is custom on Android, you need to initialize it.
     AppDelegate::initAppModules();
     SceneSwitcher::sharedSwitcher()->initWithScene(FIRST_SCENE);
+#if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+    discardSplashScreen();
 #endif
     return true;
 }

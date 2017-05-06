@@ -32,8 +32,7 @@
 typedef enum
 {
 	None = 0,
-    SplashScreen = 1,
-    Home = 2,
+    Home = 1,
 }SceneName;
 
 //Here is the place to put your hierarchy so FenneX know what to do with a Back event
@@ -54,8 +53,6 @@ static const char* formatSceneToString(SceneName scene)
 	{
 		case None:
 			return "None";
-		case SplashScreen:
-			return "SplashScreen";
 		case Home:
 			return "Home";
     }

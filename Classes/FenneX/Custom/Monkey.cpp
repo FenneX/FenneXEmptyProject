@@ -55,7 +55,7 @@ void Monkey::update(float delta)
             state = Random;
         }
     }
-    CCArray* buttons = GraphicLayer::sharedLayer()->allObjects([](RawObject* obj) -> bool {
+    CCArray* buttons = GraphicLayer::sharedLayer()->all([](RawObject* obj) -> bool {
         return obj->getNode() != NULL &&
             GraphicLayer::sharedLayer()->isWorldVisible(obj) &&
             !obj->getEventName().empty() &&

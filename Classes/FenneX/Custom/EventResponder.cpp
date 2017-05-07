@@ -40,7 +40,7 @@ void EventResponder::keyBackClicked(EventCustom* event)
     time_t currentTime;
     time(&currentTime);
     double diff = difftime(currentTime, lastClickTime);
-    RawObject* back = layer->firstObjectWithName("BackButton");
+    RawObject* back = layer->first("BackButton");
     SceneName previous = getPreviousSceneName(currentScene->getSceneName());
     
     if((back != NULL || previous != None) && fabs(diff) > 1.0)

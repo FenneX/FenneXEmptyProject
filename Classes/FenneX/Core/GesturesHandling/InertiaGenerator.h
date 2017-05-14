@@ -28,6 +28,8 @@ THE SOFTWARE.
 #include "cocos2d.h"
 #include "Pausable.h"
 #include "FenneXMacros.h"
+#include "RawObject.h"
+#include "Panel.h"
 
 USING_NS_CC;
 
@@ -42,23 +44,23 @@ public:
     void planSceneSwitch(EventCustom* event);
     void scrolling(EventCustom* eventj);
     void scrollingEnded(EventCustom* event);
-    void stopInertia(Ref* obj);
+    void stopInertia(RawObject* obj);
     virtual void update(float delta);
     
     //If a tap is recognized, no inertia is generated
     void tapRecognized(EventCustom* event);
     void ignoreTouch(Touch* touch);
     
-    void addPossibleTarget(Ref* target);
-    CC_DEPRECATED_ATTRIBUTE void addPossibleTargets(CCArray* target);
-    void addPossibleTargets(Vector<Ref*> target);
+    void addPossibleTarget(RawObject* target);
+    void addPossibleTargets(Vector<RawObject*> target);
+    void addPossibleTargets(Vector<Panel*> target);
     
 protected:
     void init();
     ~InertiaGenerator();
     
-    Vector<Ref*> possibleTargets;
-    Vector<Ref*> inertiaTargets;
+    Vector<RawObject*> possibleTargets;
+    Vector<RawObject*> inertiaTargets;
     Vector<Inertia*> inertiaParameters;
     
     std::map<int, std::vector<Vec2>> lastOffsets;

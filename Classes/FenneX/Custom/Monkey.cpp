@@ -55,7 +55,7 @@ void Monkey::update(float delta)
             state = Random;
         }
     }
-    CCArray* buttons = GraphicLayer::sharedLayer()->all([](RawObject* obj) -> bool {
+    Vector<RawObject*> buttons = GraphicLayer::sharedLayer()->all([](RawObject* obj) -> bool {
         return obj->getNode() != NULL &&
             GraphicLayer::sharedLayer()->isWorldVisible(obj) &&
             !obj->getEventName().empty() &&
@@ -63,15 +63,15 @@ void Monkey::update(float delta)
             obj->getEventActivated();
     });
     this->removeBadButtons(buttons);
-    CCArray* probableTargets = NULL;
+    Vector<RawObject*> probableTargets;
     if(state == SearchScenes)
     {
         probableTargets = this->selectUnknownScenesSwitchButtons(buttons);
-        if(probableTargets->count() == 0)
+        if(probableTargets.size() == 0)
         {
             probableTargets = this->selectAllScenesSwitchButtons(buttons);
         }
-        if(probableTargets->count() == 0)
+        if(probableTargets.size() == 0)
         {
             probableTargets = buttons;
         }
@@ -80,9 +80,9 @@ void Monkey::update(float delta)
     {
         probableTargets = buttons;
     }
-    if(probableTargets->count() != 0)
+    if(probableTargets.size() != 0)
     {
-        RawObject* target = (RawObject*)probableTargets->objectAtIndex(arc4random()%probableTargets->count());
+        RawObject* target = (RawObject*)probableTargets.at(arc4random() % probableTargets.size());
         GraphicLayer::sharedLayer()->touchAtPosition(GraphicLayer::sharedLayer()->getRealPosition(target), true);
     }
     iterations++;
@@ -103,13 +103,13 @@ void Monkey::init()
     }
 }
 
-void Monkey::removeBadButtons(CCArray* buttons)
+void Monkey::removeBadButtons(Vector<RawObject*> buttons)
 {
     Rect windowRect = Rect(0, 0, Director::getInstance()->getWinSize().width, Director::getInstance()->getWinSize().height);
     GraphicLayer* layer = GraphicLayer::sharedLayer();
-    for(int i = buttons->count() - 1; i >= 0; i--)
+    for(long i = buttons.size() - 1; i >= 0; i--)
     {
-        RawObject* obj = (RawObject*)buttons->objectAtIndex(i);
+        RawObject* obj = buttons.at(i);
         //Remove objects which don't collide with windowRect. It uses code from Rect::intersectRect (which can't be used directly because a Rect origin must be > (0,0))
         Vec2 pos = layer->getRealPosition(obj);
         Size size = SizeMult(obj->getSize(), layer->getRealScale(obj));
@@ -118,42 +118,44 @@ void Monkey::removeBadButtons(CCArray* buttons)
            windowRect.getMaxY() < pos.y - obj->getNode()->getAnchorPoint().y * size.height ||
            pos.y + (1-obj->getNode()->getAnchorPoint().y) * size.height <      windowRect.getMinY())
         {
-            buttons->removeObject(obj);
+            buttons.eraseObject(obj);
         }
         else if(obj->getEventName() == "PickImage"
-           || obj->getEventName() == "OpenKeyboard"
-           || obj->getEventName() == "DoNothing"
+                || obj->getEventName() == "OpenKeyboard"
+                || obj->getEventName() == "DoNothing"
+                || obj->getEventName() == "OpenURL"
+                || obj->getEventName() == "OpenMail"
+                //|| (strcmp(obj->getEventName(), "PlanSceneSwitch") == 0 && TOINT(obj->getEventInfos()->objectForKey("Scene")) == (int)ManagementHome)
+                //|| (strcmp(obj->getEventName(), "PlanSceneSwitch") == 0 && TOINT(obj->getEventInfos()->objectForKey("Scene")) == (int)EditUser)
            )
         {
-            buttons->removeObject(obj);
+            buttons.eraseObject(obj);
         }
     }
 }
 
-CCArray* Monkey::selectAllScenesSwitchButtons(CCArray* buttons)
+Vector<RawObject*> Monkey::selectAllScenesSwitchButtons(Vector<RawObject*> buttons)
 {
-    CCArray* result = Acreate();
-    for(int i = 0; i < buttons->count(); i++)
+    Vector<RawObject*> result;
+    for(RawObject* obj  : buttons)
     {
-        RawObject* obj = (RawObject*)buttons->objectAtIndex(i);
         if(obj->getEventName() == "PlanSceneSwitch")
         {
-            result->addObject(obj);
+            result.pushBack(obj);
         }
     }
     return result;    
 }
 
-CCArray* Monkey::selectUnknownScenesSwitchButtons(CCArray* buttons)
+Vector<RawObject*> Monkey::selectUnknownScenesSwitchButtons(Vector<RawObject*> buttons)
 {
-    CCArray* result = Acreate();
-    for(int i = 0; i < buttons->count(); i++)
+    Vector<RawObject*> result;
+    for(RawObject* obj  : buttons)
     {
-        RawObject* obj = (RawObject*)buttons->objectAtIndex(i);
         if(obj->getEventName() == "PlanSceneSwitch"
            && !isSceneVisited[TOINT(obj->getEventInfos()->objectForKey("Scene"))])
         {
-            result->addObject(obj);
+            result.pushBack(obj);
         }
     }
     return result;

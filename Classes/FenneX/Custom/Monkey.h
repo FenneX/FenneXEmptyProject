@@ -52,9 +52,9 @@ protected:
     MonkeyState state;
     int iterations;
     bool isSceneVisited[SCENES_NUMBER];
-    void removeBadButtons(CCArray* buttons);
-    CCArray* selectAllScenesSwitchButtons(CCArray* buttons);
-    CCArray* selectUnknownScenesSwitchButtons(CCArray* buttons);
+    void removeBadButtons(Vector<RawObject*> buttons);
+    Vector<RawObject*> selectAllScenesSwitchButtons(Vector<RawObject*> buttons);
+    Vector<RawObject*> selectUnknownScenesSwitchButtons(Vector<RawObject*> buttons);
 };
 
 #endif /* defined(__FenneX__Monkey__) */

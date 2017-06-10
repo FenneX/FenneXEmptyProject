@@ -53,8 +53,8 @@ void AppDelegate::initGLContextAttrs()
 
 void AppDelegate::loadAnalytics()
 {
-    AnalyticsWrapper::setAppVersion("0.1");
-    log("Set app version");
+    AnalyticsWrapper::setAppVersion(getAppVersionNumber());
+    log("Set app version to %s", getAppVersionNumber().c_str());
     
 #if DEBUG_ANALYTICS
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)

@@ -30,6 +30,10 @@
 		5087E76B17EB910900C73F5D /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D44C620F132DFF4E0009C878 /* AudioToolbox.framework */; };
 		5087E78917EB974C00C73F5D /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5087E78817EB974C00C73F5D /* AppKit.framework */; };
 		5087E78B17EB975400C73F5D /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5087E78A17EB975400C73F5D /* OpenGL.framework */; };
+		5C71281C206540F200BC0F26 /* FileUtility.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C712818206540F200BC0F26 /* FileUtility.cpp */; };
+		5C71281F2065410200BC0F26 /* InactivityTimer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C71281D2065410200BC0F26 /* InactivityTimer.cpp */; };
+		5C7128222065411600BC0F26 /* LazyLoader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7128212065411600BC0F26 /* LazyLoader.cpp */; };
+		5C7128252065498C00BC0F26 /* AVKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C7128242065498C00BC0F26 /* AVKit.framework */; };
 		6A1B38D91EBE20E800FCE610 /* ValueConversion.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6A1B38D71EBE20E800FCE610 /* ValueConversion.cpp */; };
 		6A35C943199D074A009A2D9C /* AnalyticsWrapperImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 6A35C908199D074A009A2D9C /* AnalyticsWrapperImpl.mm */; };
 		6A35C944199D074A009A2D9C /* AnalyticXStringUtil.mm in Sources */ = {isa = PBXBuildFile; fileRef = 6A35C90A199D074A009A2D9C /* AnalyticXStringUtil.mm */; };
@@ -86,7 +90,6 @@
 		6A35CA3C199D07BE009A2D9C /* Shorteners.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6A35C9BB199D07BE009A2D9C /* Shorteners.cpp */; };
 		6A35CA3D199D07BE009A2D9C /* StringUtility.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6A35C9BD199D07BE009A2D9C /* StringUtility.cpp */; };
 		6A35CA3E199D07BE009A2D9C /* SynchronousReleaser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6A35C9BF199D07BE009A2D9C /* SynchronousReleaser.cpp */; };
-		6A35CA3F199D07BE009A2D9C /* TMPPoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6A35C9C2199D07BE009A2D9C /* TMPPoint.cpp */; };
 		6A35CA40199D07BE009A2D9C /* EventResponder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6A35C9C5199D07BE009A2D9C /* EventResponder.cpp */; };
 		6A35CA4C199D07BE009A2D9C /* LayoutHandlerCreation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6A35C9D2199D07BE009A2D9C /* LayoutHandlerCreation.cpp */; };
 		6A35CA4D199D07BE009A2D9C /* Monkey.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6A35C9D3199D07BE009A2D9C /* Monkey.cpp */; };
@@ -162,6 +165,13 @@
 			remoteGlobalIDString = A07A4C241783777C0073F6A7;
 			remoteInfo = "cocos2dx iOS";
 		};
+		5C71281A206540F200BC0F26 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1AC6FAE5180E9839004C840B /* cocos2d_libs.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 507B40FD1C31BDD30067B53E;
+			remoteInfo = "libcocos2d tvOS";
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
@@ -188,6 +198,13 @@
 		5087E76F17EB910900C73F5D /* FenneXEmptyProject Mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "FenneXEmptyProject Mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5087E78817EB974C00C73F5D /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		5087E78A17EB975400C73F5D /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		5C712818206540F200BC0F26 /* FileUtility.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FileUtility.cpp; sourceTree = "<group>"; };
+		5C71281D2065410200BC0F26 /* InactivityTimer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InactivityTimer.cpp; sourceTree = "<group>"; };
+		5C71281E2065410200BC0F26 /* InactivityTimer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InactivityTimer.h; sourceTree = "<group>"; };
+		5C7128202065411600BC0F26 /* LazyLoader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LazyLoader.h; sourceTree = "<group>"; };
+		5C7128212065411600BC0F26 /* LazyLoader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LazyLoader.cpp; sourceTree = "<group>"; };
+		5C7128232065412000BC0F26 /* DelegatingRecognizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DelegatingRecognizer.h; sourceTree = "<group>"; };
+		5C7128242065498C00BC0F26 /* AVKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.2.sdk/System/Library/Frameworks/AVKit.framework; sourceTree = DEVELOPER_DIR; };
 		6A1B38D71EBE20E800FCE610 /* ValueConversion.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ValueConversion.cpp; sourceTree = "<group>"; };
 		6A1B38D81EBE20E800FCE610 /* ValueConversion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ValueConversion.h; sourceTree = "<group>"; };
 		6A35C908199D074A009A2D9C /* AnalyticsWrapperImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AnalyticsWrapperImpl.mm; sourceTree = "<group>"; };
@@ -305,8 +322,6 @@
 		6A35C9BF199D07BE009A2D9C /* SynchronousReleaser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SynchronousReleaser.cpp; sourceTree = "<group>"; };
 		6A35C9C0199D07BE009A2D9C /* SynchronousReleaser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SynchronousReleaser.h; sourceTree = "<group>"; };
 		6A35C9C1199D07BE009A2D9C /* SynthesizeString.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SynthesizeString.h; sourceTree = "<group>"; };
-		6A35C9C2199D07BE009A2D9C /* TMPPoint.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TMPPoint.cpp; sourceTree = "<group>"; };
-		6A35C9C3199D07BE009A2D9C /* TMPPoint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TMPPoint.h; sourceTree = "<group>"; };
 		6A35C9C5199D07BE009A2D9C /* EventResponder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EventResponder.cpp; sourceTree = "<group>"; };
 		6A35C9C6199D07BE009A2D9C /* EventResponder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EventResponder.h; sourceTree = "<group>"; };
 		6A35C9D2199D07BE009A2D9C /* LayoutHandlerCreation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LayoutHandlerCreation.cpp; sourceTree = "<group>"; };
@@ -383,6 +398,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5C7128252065498C00BC0F26 /* AVKit.framework in Frameworks */,
 				84C019431DA7AA240016EE3C /* libsqlite3.tbd in Frameworks */,
 				84B1C3371DA6A5C000D12057 /* GameController.framework in Frameworks */,
 				84B1C3351DA6A5B900D12057 /* SystemConfiguration.framework in Frameworks */,
@@ -491,6 +507,7 @@
 			children = (
 				1AC6FAF9180E9839004C840B /* libcocos2d Mac.a */,
 				1AC6FB07180E9839004C840B /* libcocos2d iOS.a */,
+				5C71281B206540F200BC0F26 /* libcocos2d tvOS.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -512,6 +529,7 @@
 		29B97323FDCFA39411CA2CEA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				5C7128242065498C00BC0F26 /* AVKit.framework */,
 				84C019421DA7AA240016EE3C /* libsqlite3.tbd */,
 				84B1C3361DA6A5C000D12057 /* GameController.framework */,
 				84B1C3341DA6A5B900D12057 /* SystemConfiguration.framework */,
@@ -737,6 +755,7 @@
 		6A35C987199D07BE009A2D9C /* GesturesHandling */ = {
 			isa = PBXGroup;
 			children = (
+				5C7128232065412000BC0F26 /* DelegatingRecognizer.h */,
 				6A35C988199D07BE009A2D9C /* GenericRecognizer.cpp */,
 				6A35C989199D07BE009A2D9C /* GenericRecognizer.h */,
 				6A35C98A199D07BE009A2D9C /* Inertia.cpp */,
@@ -775,6 +794,8 @@
 				6A35C9A3199D07BE009A2D9C /* LabelTTF.h */,
 				6A35C9A4199D07BE009A2D9C /* LayoutHandler.cpp */,
 				6A35C9A5199D07BE009A2D9C /* LayoutHandler.h */,
+				5C7128212065411600BC0F26 /* LazyLoader.cpp */,
+				5C7128202065411600BC0F26 /* LazyLoader.h */,
 				6A35C9A6199D07BE009A2D9C /* Panel.cpp */,
 				6A35C9A7199D07BE009A2D9C /* Panel.h */,
 				6A35C9A8199D07BE009A2D9C /* RawObject.cpp */,
@@ -801,6 +822,8 @@
 				6A1B38D81EBE20E800FCE610 /* ValueConversion.h */,
 				6A8BA9681AA76C41002E97E0 /* DelayedDispatcher.cpp */,
 				6A8BA9691AA76C41002E97E0 /* DelayedDispatcher.h */,
+				5C71281D2065410200BC0F26 /* InactivityTimer.cpp */,
+				5C71281E2065410200BC0F26 /* InactivityTimer.h */,
 				6A35C9B0199D07BE009A2D9C /* Localization.cpp */,
 				6A35C9B1199D07BE009A2D9C /* Localization.h */,
 				6A35C9B3199D07BE009A2D9C /* Pausable.h */,
@@ -818,8 +841,6 @@
 				6A35C9BF199D07BE009A2D9C /* SynchronousReleaser.cpp */,
 				6A35C9C0199D07BE009A2D9C /* SynchronousReleaser.h */,
 				6A35C9C1199D07BE009A2D9C /* SynthesizeString.h */,
-				6A35C9C2199D07BE009A2D9C /* TMPPoint.cpp */,
-				6A35C9C3199D07BE009A2D9C /* TMPPoint.h */,
 			);
 			path = Utility;
 			sourceTree = "<group>";
@@ -844,6 +865,7 @@
 				84578A751C6B72370058EAAA /* NetworkUtility.h */,
 				8449D5481BBE86110067ADA3 /* DropDownListWrapper.h */,
 				8449D5491BBE86110067ADA3 /* FileUtility.h */,
+				5C712818206540F200BC0F26 /* FileUtility.cpp */,
 				6A35C9D9199D07BE009A2D9C /* AnalyticsWrapper.cpp */,
 				6A35C9DA199D07BE009A2D9C /* AnalyticsWrapper.h */,
 				6A35C9DB199D07BE009A2D9C /* AudioPickerWrapper.h */,
@@ -975,6 +997,13 @@
 			remoteRef = 1AC6FB06180E9839004C840B /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
+		5C71281B206540F200BC0F26 /* libcocos2d tvOS.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = "libcocos2d tvOS.a";
+			remoteRef = 5C71281A206540F200BC0F26 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
 /* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
@@ -1023,6 +1052,7 @@
 				6A35CA2C199D07BE009A2D9C /* TapRecognizer.cpp in Sources */,
 				6A35C955199D074A009A2D9C /* NativeUtility.mm in Sources */,
 				8449D54C1BBE86220067ADA3 /* DropDownList.cpp in Sources */,
+				5C7128222065411600BC0F26 /* LazyLoader.cpp in Sources */,
 				84578A771C6B72490058EAAA /* NetworkUtility.mm in Sources */,
 				6A35C95C199D074A009A2D9C /* VideoRecorder.mm in Sources */,
 				6A8BA96A1AA76C41002E97E0 /* DelayedDispatcher.cpp in Sources */,
@@ -1032,10 +1062,12 @@
 				6A35CA3B199D07BE009A2D9C /* RandomHelper.cpp in Sources */,
 				6A35C951199D074A009A2D9C /* SKProduct+priceAsString.m in Sources */,
 				6A35CA21199D07BE009A2D9C /* CustomLabel.cpp in Sources */,
+				5C71281F2065410200BC0F26 /* InactivityTimer.cpp in Sources */,
 				6A35C94D199D074A009A2D9C /* UIImage+Resize.mm in Sources */,
 				6A35CA27199D07BE009A2D9C /* Inertia.cpp in Sources */,
 				6A35CA4D199D07BE009A2D9C /* Monkey.cpp in Sources */,
 				6A35C943199D074A009A2D9C /* AnalyticsWrapperImpl.mm in Sources */,
+				5C71281C206540F200BC0F26 /* FileUtility.cpp in Sources */,
 				6A35CA32199D07BE009A2D9C /* LabelTTF.cpp in Sources */,
 				6A35C94E199D074A009A2D9C /* InAppPurchaseManager.mm in Sources */,
 				6A35CA2D199D07BE009A2D9C /* TouchLinker.cpp in Sources */,
@@ -1068,7 +1100,6 @@
 				6A35CA33199D07BE009A2D9C /* LayoutHandler.cpp in Sources */,
 				6A35C950199D074A009A2D9C /* NSString+RangeOfCharacters.m in Sources */,
 				6A35C95A199D074A009A2D9C /* VideoPlayerImplIOS.mm in Sources */,
-				6A35CA3F199D07BE009A2D9C /* TMPPoint.cpp in Sources */,
 				6A35C959199D074A009A2D9C /* VideoPicker.mm in Sources */,
 				6A35CA4C199D07BE009A2D9C /* LayoutHandlerCreation.cpp in Sources */,
 				6A35C957199D074A009A2D9C /* TTSWrapper.mm in Sources */,

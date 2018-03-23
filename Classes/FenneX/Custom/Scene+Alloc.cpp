@@ -25,7 +25,7 @@
 #include "Scene.h"
 USING_NS_FENNEX;
 
-FenneX::Scene* FenneX::Scene::createScene(SceneName name, CCDictionary* param)
+FenneX::Scene* FenneX::Scene::createScene(SceneName name, ValueMap param)
 {
     FenneX::Scene* created = NULL;
     switch (name)

@@ -57,10 +57,10 @@ void Monkey::update(float delta)
     }
     Vector<RawObject*> buttons = GraphicLayer::sharedLayer()->all([](RawObject* obj) -> bool {
         return obj->getNode() != NULL &&
-            GraphicLayer::sharedLayer()->isWorldVisible(obj) &&
-            !obj->getEventName().empty() &&
-            obj->getEventName()[0] != '\0' &&
-            obj->getEventActivated();
+        GraphicLayer::sharedLayer()->isWorldVisible(obj) &&
+        !obj->getEventName().empty() &&
+        obj->getEventName()[0] != '\0' &&
+        obj->getEventActivated();
     });
     this->removeBadButtons(buttons);
     Vector<RawObject*> probableTargets;
@@ -123,11 +123,7 @@ void Monkey::removeBadButtons(Vector<RawObject*> buttons)
         else if(obj->getEventName() == "PickImage"
                 || obj->getEventName() == "OpenKeyboard"
                 || obj->getEventName() == "DoNothing"
-                || obj->getEventName() == "OpenURL"
-                || obj->getEventName() == "OpenMail"
-                //|| (strcmp(obj->getEventName(), "PlanSceneSwitch") == 0 && TOINT(obj->getEventInfos()->objectForKey("Scene")) == (int)ManagementHome)
-                //|| (strcmp(obj->getEventName(), "PlanSceneSwitch") == 0 && TOINT(obj->getEventInfos()->objectForKey("Scene")) == (int)EditUser)
-           )
+                )
         {
             buttons.eraseObject(obj);
         }
@@ -144,7 +140,7 @@ Vector<RawObject*> Monkey::selectAllScenesSwitchButtons(Vector<RawObject*> butto
             result.pushBack(obj);
         }
     }
-    return result;    
+    return result;
 }
 
 Vector<RawObject*> Monkey::selectUnknownScenesSwitchButtons(Vector<RawObject*> buttons)
@@ -153,10 +149,11 @@ Vector<RawObject*> Monkey::selectUnknownScenesSwitchButtons(Vector<RawObject*> b
     for(RawObject* obj  : buttons)
     {
         if(obj->getEventName() == "PlanSceneSwitch"
-           && !isSceneVisited[TOINT(obj->getEventInfos()->objectForKey("Scene"))])
+           && !isSceneVisited[obj->getEventInfo("Scene").asInt()])
         {
             result.pushBack(obj);
         }
     }
     return result;
 }
+

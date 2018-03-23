@@ -87,28 +87,27 @@ void AppDelegate::initAppModules()
     //Disable pop up notify for fail (for example at resume, it will try to load some delete assets if you remove a custom photo
     FileUtils::getInstance()->setPopupNotify(false);
     
-	CCDictionary* settings = (CCDictionary*)loadObjectFromFile("last_settings.plist");
-	bool firstLaunch = settings == NULL || !isKindOfClass(settings->objectForKey("FirstLaunch"), CCBool) || TOBOOL(settings->objectForKey("FirstLaunch"));
+    Value settingsValue = loadValueFromFile("last_settings.plist");
+    ValueMap settings = isValueOfType(settingsValue, MAP) ? settingsValue.asValueMap() : ValueMap();
+    bool firstLaunch = !isValueOfType(settingsValue, MAP) || !isValueOfType(settingsValue.asValueMap()["FirstLaunch"], BOOLEAN) || settingsValue.asValueMap()["FirstLaunch"].asBool();
 	if(firstLaunch)
 	{
-		CCString* language = ScreateF("Language: %s", getLocalLanguage().c_str());
-		if(settings == NULL)
-		{
-			settings = Dcreate();
-		}
-		log("%s", language->getCString());
-		AnalyticsWrapper::logEvent(language->getCString());
-		settings->setObject(Screate(getLocalLanguage()), "Language");
-		settings->setObject(Bcreate(false), "FirstLaunch");
+		
+        std::string language = "Language: " + getLocalLanguage();
+        log("%s", language.c_str());
+        AnalyticsWrapper::logEvent(language);
+        settings["Language"] = Value(getLocalLanguage());
+        settings["FirstLaunch"] = Value(false);
+    }
+    else if(getLocalLanguage() != settings["Language"].asString())
+    {
+        std::string language = "Change to language: " + getLocalLanguage() + ", previous language: " + settings["Language"].asString();
+        log("%s", language.c_str());
+        AnalyticsWrapper::logEvent(language);
+        settings["Language"] = Value(getLocalLanguage());
 	}
-	else if(getLocalLanguage() != TOCSTRING(settings->objectForKey("Language")))
-	{
-		CCString* language = ScreateF("Change to language: %s, previous language: %s", getLocalLanguage().c_str(), TOCSTRING(settings->objectForKey("Language")));
-		log("%s", language->getCString());
-		AnalyticsWrapper::logEvent(language->getCString());
-		settings->setObject(Screate(getLocalLanguage()), "Language");
-	}
-	saveObjectToFile(settings, "last_settings.plist");
+    settingsValue = Value(settings);
+    saveValueToFile(settingsValue, "last_settings.plist");
     
     //Initialize Audio session (not in recording mode at startup)
 	AudioPlayerRecorder::sharedRecorder();

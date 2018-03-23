@@ -28,8 +28,8 @@
 
 void EventResponder::planSceneSwitch(EventCustom* event)
 {
-    CCDictionary* infos = (CCDictionary*)event->getUserData();
-    SceneName scene = (SceneName)TOINT(infos->objectForKey("Scene"));
+    ValueMap infos = ((Value*)event->getUserData())->asValueMap();
+    SceneName scene = (SceneName)infos["Scene"].asInt();
     AnalyticsWrapper::logPageView(formatSceneToString(scene));
 }
 
@@ -63,9 +63,10 @@ void EventResponder::keyBackClicked(EventCustom* event)
 
 void EventResponder::back(EventCustom* event)
 {
-    CCDictionary* infos = event != NULL && event->getUserData() != NULL && isKindOfClass((Ref*)event->getUserData(), CCDictionary) ? CCDictionary::createWithDictionary((CCDictionary*)event->getUserData()) : Dcreate();
-    infos->setObject(Icreate(getPreviousSceneName(currentScene->getSceneName())), "Scene");
-    Director::getInstance()->getEventDispatcher()->dispatchCustomEvent("PlanSceneSwitch", infos);
+    ValueMap infos = event != NULL && event->getUserData() != NULL && ((Value*)event->getUserData())->getType() == Value::Type::MAP ? ((Value*)event->getUserData())->asValueMap() : ValueMap();
+    infos["Scene"] = Value(getPreviousSceneName(currentScene->getSceneName()));
+    Value toSend = Value(infos);
+    Director::getInstance()->getEventDispatcher()->dispatchCustomEvent("PlanSceneSwitch", &toSend);
 }
 
 void EventResponder::quitApp(EventCustom* event)

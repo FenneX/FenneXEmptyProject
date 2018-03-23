@@ -51,7 +51,7 @@ void LayoutHandler::createSceneGraphics(Scene* target)
             break;
         default:
             //Scenes that don't require any logic can be automatically loaded from their name
-            loadCCBFromFileToFenneX(ScreateF("ccbi/%s", formatSceneToString(target->getSceneName()))->getCString());
+            loadCCBFromFileToFenneX(string_format("ccbi/%s", formatSceneToString(target->getSceneName())));
             break;
     }
     
@@ -64,16 +64,16 @@ void LayoutHandler::createSceneGraphics(Scene* target)
 #endif
 }
 
-#define ADD_OBSERVER(func, notifName) (listeners.pushBack(Director::getInstance()->getEventDispatcher()->addCustomEventListener(notifName, std::bind(&EventResponder::func, responder, std::placeholders::_1))))
+#define ADD_LAYOUT_OBSERVER(func, notifName) (listeners.pushBack(Director::getInstance()->getEventDispatcher()->addCustomEventListener(notifName, std::bind(&EventResponder::func, responder, std::placeholders::_1))))
 void LayoutHandler::catchEvents(Scene* target)
 {
     //Uncomment the following line to have a monkey tap everywhere. It catchs some types of bug very quickly!
     //target->addUpdatable(Monkey::excitedMonkey());
     
-    ADD_OBSERVER(keyBackClicked, "KeyBackClicked");
-    ADD_OBSERVER(back, "Back");
-    ADD_OBSERVER(quitApp, "QuitApp");
-    ADD_OBSERVER(planSceneSwitch, "PlanSceneSwitch");
+    ADD_LAYOUT_OBSERVER(keyBackClicked, "KeyBackClicked");
+    ADD_LAYOUT_OBSERVER(back, "Back");
+    ADD_LAYOUT_OBSERVER(quitApp, "QuitApp");
+    ADD_LAYOUT_OBSERVER(planSceneSwitch, "PlanSceneSwitch");
     switch(target->getSceneName())
     {
         case Home:

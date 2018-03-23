@@ -5,7 +5,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.2.0'
+        classpath 'com.android.tools.build:gradle:2.3.3'
         classpath 'com.google.gms:google-services:3.0.0'
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -22,7 +22,7 @@ apply plugin: 'com.android.application'
 
 dependencies {
     compile fileTree(dir: 'libs', include: '*.jar')
-    compile 'com.android.support:support-v4:24.2.1'
+    compile 'com.android.support:support-v4:25.3.1'
     compile('de.mrmaffen:vlc-android-sdk:3.0.0'){
         exclude module: 'support-v4' // remove alreay included jar
     }
@@ -35,7 +35,7 @@ apply plugin: 'com.google.gms.google-services'
 
 android {
     compileSdkVersion 23
-    buildToolsVersion "23.0.2"
+    buildToolsVersion '25.0.3'
 
     /* If you don't need to use libvlc and want to make the apk lighter, uncomment this
     // Remove armeabi libvlc, no wildcards or glob supported yet by packagingOptions so we have to list it all

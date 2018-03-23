@@ -28,13 +28,7 @@ THE SOFTWARE.
 #include "FenneX.h"
 USING_NS_FENNEX;
 
-/*
-#if CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
-#include <jni.h>
-void Java_org_cocos2dx_socialhandy_FenneX_notifyImagePickedWrapper(JNIEnv* env, jobject thiz, jstring name, jstring identifier);
-#endif*/
-
-//this method have to be implemented in each platform. The parameter is the local path at which the image will be saved
+//this method have to be implemented in each platform. The parameter is the path and location at which the image will be saved
 //return false if there is a problem
 //The image picker will send an ImagePicked notification
 
@@ -57,15 +51,16 @@ typedef enum
  * On iOS, the PhotoLibrary is the same as FileLibrary.
  * The FileLibrary launch a file explorer app where the name is visible. The user can choose the app, so if it's a custom one, it can potentially return something wrong and not apply the filter.
  **/
-bool pickImageFrom(const std::string& saveName, PickOption pickOption, int width, int height, const std::string& identifier, bool rescale = true, float thumbnailScale = -1);
+bool pickImageFrom(const std::string& saveName, FileLocation location, PickOption pickOption, int width, int height, const std::string& identifier, bool rescale = true, float thumbnailScale = -1);
 bool isCameraAvailable();
 
-static inline void notifyImagePicked(std::string name, std::string identifier)
+static inline void notifyImagePicked(std::string name, FileLocation location, std::string identifier)
 {
+    Value toSend = Value(ValueMap({{"Name", Value(name)}, {"Location", Value((int)location)}, {"Identifier", Value(identifier)}}));
 #if CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
-    DelayedDispatcher::eventAfterDelay("ImagePicked", DcreateP(Screate(name), Screate("Name"), Screate(identifier), Screate("Identifier"), NULL), 0.001);
+    DelayedDispatcher::eventAfterDelay("ImagePicked", toSend, 0.001);
 #else
-    Director::getInstance()->getEventDispatcher()->dispatchCustomEvent("ImagePicked", DcreateP(Screate(name), Screate("Name"), Screate(identifier), Screate("Identifier"), NULL) );
+    Director::getInstance()->getEventDispatcher()->dispatchCustomEvent("ImagePicked", &toSend);
 #endif
 }
 #endif
@@ -74,7 +69,7 @@ static inline void notifyImagePicked(std::string name, std::string identifier)
 
 static inline void notifyImagePickCancelled()
 {
-    DelayedDispatcher::eventAfterDelay("ImagePickerCancelled", Dcreate(), 0.01);
+    DelayedDispatcher::eventAfterDelay("ImagePickerCancelled", Value(), 0.01);
 }
 
 

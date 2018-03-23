@@ -63,10 +63,9 @@
 - (void) setRecordEnabled:(BOOL)enabled;
 
 - (void) startRecording;
-- (void) stopRecording:(NSString*)file;
+- (void) stopRecording:(NSString*)fullPath;
 //- (BOOL) canPlay:(NSString*)file;
 - (void) setPlayFile:(NSString*)file;
-- (void) deleteFile:(NSString*)file;
 - (float) play:(float)startTime volume:(float)volume;
 - (float) playIndependentFile:(NSString*)file volume:(float)volume;
 - (void) stopPlaying;

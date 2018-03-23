@@ -26,10 +26,10 @@ THE SOFTWARE.
 #include "SceneSwitcher.h"
 #include "SynchronousReleaser.h"
 #include "LayoutHandler.h"
-#include "TapRecognizer.h"
 #include "Shorteners.h"
 #include "AppMacros.h"
 #include "NativeUtility.h"
+#include "InactivityTimer.h"
 
 NS_FENNEX_BEGIN
 void Scene::initScene()
@@ -50,21 +50,23 @@ void Scene::initScene()
     linker = new TouchLinker();
 }
 
-Scene::Scene(SceneName identifier, CCDictionary* parameters) :
+Scene::Scene(SceneName identifier, ValueMap parameters) :
 sceneName(identifier)
 {
     this->initScene();
-    this->parameters = CCDictionary::createWithDictionary(parameters);
-    this->parameters->retain();
+    this->parameters = parameters;
     numberOfTouches = 0;
     
     //GraphicLayer is a Ref*, retain it for updateList
     GraphicLayer::sharedLayer()->retain();
     updateList.push_back(GraphicLayer::sharedLayer());
+    InactivityTimer::getInstance()->retain();
+    updateList.push_back(InactivityTimer::getInstance());
+    
     
     //The order is very important : TapRecognized must be registered before InertiaGenerator (generally added in linkToScene), because it can cancel inertia
     this->addTouchreceiver(TapRecognizer::sharedRecognizer());
-    tapListener = Director::getInstance()->getEventDispatcher()->addCustomEventListener("TapRecognized", std::bind(&Scene::tapRecognized, this, std::placeholders::_1));
+    TapRecognizer::sharedRecognizer()->addDelegate(this);
     
     appWillResignListener = Director::getInstance()->getEventDispatcher()->addCustomEventListener("AppWillResignActive", std::bind(&Scene::dropAllTouches, this, std::placeholders::_1));
     
@@ -111,9 +113,9 @@ Scene::~Scene()
         keyboardListener->release();
         keyboardListener = NULL;
     }
-    Director::getInstance()->getEventDispatcher()->removeEventListener(tapListener);
     Director::getInstance()->getEventDispatcher()->removeEventListener(appWillResignListener);
-    parameters->release();
+    TapRecognizer::sharedRecognizer()->removeDelegate(this);
+    parameters.clear();
     delegate->release();
     linker->release();
 }
@@ -289,6 +291,8 @@ bool Scene::onTouchBegan(Touch *touch, Event *pEvent)
     //TODO : cancel selection if needed
     numberOfTouches++;
     //log("onTouchBegan ended");
+    
+    InactivityTimer::resetTimer();
     return true;
 }
 
@@ -300,7 +304,7 @@ void Scene::onTouchMoved(Touch *touch, Event *pEvent)
     {
         Image* toggle = (Image*)linker->linkedObjectOf(touch);
         GraphicLayer* layer = GraphicLayer::sharedLayer();
-        char *end = strrchr(toggle->getImageFile().c_str(), '-');
+        const char *end = strrchr(toggle->getImageFile().c_str(), '-');
         if(end && strcmp(end, "-on") == 0 && !layer->all(Scene::touchPosition(touch)).contains(toggle))
         {
             this->switchButton(toggle, false);
@@ -312,6 +316,7 @@ void Scene::onTouchMoved(Touch *touch, Event *pEvent)
         if(!receiversToRemove.contains(receiver)) receiver->onTouchMoved(touch, pEvent);
     }
     //log("onTouchMoved ended");
+    InactivityTimer::resetTimer();
 }
 
 void Scene::onTouchEnded(Touch *touch, Event *pEvent)
@@ -323,8 +328,8 @@ void Scene::onTouchEnded(Touch *touch, Event *pEvent)
     {
         Image* toggle = (Image*)linker->linkedObjectOf(touch);
         linker->unlinkTouch(touch);
-        char *end = strrchr(toggle->getImageFile().c_str(), '-');
-        if(end && strcmp(end, "-on") == 0 && toggle->getEventInfos()->objectForKey("_OriginalImageFile") != NULL && linker->touchesLinkedTo(toggle).size() == 0)
+        const char *end = strrchr(toggle->getImageFile().c_str(), '-');
+        if(end && strcmp(end, "-on") == 0 && !toggle->getEventInfos()["_OriginalImageFile"].isNull() && linker->touchesLinkedTo(toggle).size() == 0)
         {
             this->switchButton(toggle, false);
         }
@@ -339,6 +344,7 @@ void Scene::onTouchEnded(Touch *touch, Event *pEvent)
 #if VERBOSE_TOUCH_RECOGNIZERS
     log("onTouchEnded ended at position : %f, %f, ID : %d", Scene::touchPosition(touch).x, Scene::touchPosition(touch).y, touch->getID());
 #endif
+    InactivityTimer::resetTimer();
 }
 
 void Scene::onTouchCancelled(Touch *touch, Event *pEvent)
@@ -358,19 +364,20 @@ void Scene::switchButton(Vec2 position, bool state, Touch* touch)
     {
         this->switchButton(target, state, touch);
     }
+    InactivityTimer::resetTimer();
 }
 
 void Scene::switchButton(Image* obj, bool state, Touch* touch)
 {
     if(state)
     {
-        if(obj->getEventInfos()->objectForKey("_OriginalImageFile") == NULL)
+        if(obj->getEventInfos()["_OriginalImageFile"].isNull())
         {
-            obj->setEventInfo(Screate(obj->getImageFile()), "_OriginalImageFile");
+            obj->setEventInfo("_OriginalImageFile", Value(obj->getImageFile()));
             obj->replaceTexture(obj->getImageFile() + "-on");
         }
         //If it was actually replaced, it will end by -on
-        char *end = strrchr(obj->getImageFile().c_str(), '-');
+        const char *end = strrchr(obj->getImageFile().c_str(), '-');
         if (end && strcmp(end, "-on") == 0)
         {
             linker->linkTouch(touch, obj);
@@ -382,18 +389,17 @@ void Scene::switchButton(Image* obj, bool state, Touch* touch)
     }
     else
     {
-        if(obj->getEventInfos()->objectForKey("_OriginalImageFile") != NULL)
+        if(isValueOfType(obj->getEventInfos()["_OriginalImageFile"], STRING))
         {
-            obj->replaceTexture(TOCSTRING(obj->getEventInfos()->objectForKey("_OriginalImageFile")));
+            obj->replaceTexture(obj->getEventInfos()["_OriginalImageFile"].asString());
             obj->removeEventInfo("_OriginalImageFile");
         }
         linker->unlinkObject(obj);
     }
 }
 
-void Scene::tapRecognized(EventCustom* event)
+void Scene::tapRecognized(Touch* touch)
 {
-    Touch* touch = (Touch*)((CCDictionary*)event->getUserData())->objectForKey("Touch");
     
     Vec2 pos = Scene::touchPosition(touch);
 #if VERBOSE_TOUCH_RECOGNIZERS
@@ -538,8 +544,8 @@ Image* Scene::getButtonAtPosition(Vec2 position, bool state)
             obj->collision(GraphicLayer::sharedLayer()->getPositionRelativeToObject(position, obj)))
         {
             //If state = false, the object imagefile must finish by "-on" and and have an _OriginalImageFile
-            char *end = strrchr(((Image*)obj)->getImageFile().c_str(), '-');
-            if(state || (end && strcmp(end, "-on") == 0 && obj->getEventInfos()->objectForKey("_OriginalImageFile") != NULL))
+            const char *end = strrchr(((Image*)obj)->getImageFile().c_str(), '-');
+            if(state || (end && strcmp(end, "-on") == 0 && isValueOfType(obj->getEventInfos()["_OriginalImageFile"], STRING)))
             {
                 return true;
             }

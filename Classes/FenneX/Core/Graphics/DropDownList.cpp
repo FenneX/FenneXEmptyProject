@@ -69,7 +69,7 @@ DropDownList::DropDownList(Sprite* sprite)
     dropList = new DropDownListWrapper();
     this->setEventActivated(true);
     this->setEventName("ShowSelectDropDownList");
-    listeners.pushBack(Director::getInstance()->getEventDispatcher()->addCustomEventListener("ShowSelectDropDownList", std::bind(&DropDownList::showDropDownList, this)));
+    listeners.pushBack(Director::getInstance()->getEventDispatcher()->addCustomEventListener("ShowSelectDropDownList", std::bind(&DropDownList::showDropDownList, this, std::placeholders::_1)));
     listeners.pushBack(Director::getInstance()->getEventDispatcher()->addCustomEventListener("DropDownListSelectionDone", std::bind(&DropDownList::setSelectedValue, this, std::placeholders::_1)));
 }
 
@@ -98,13 +98,14 @@ std::string DropDownList::getSelectedValue()
 
 void DropDownList::setSelectedValue(EventCustom* event)
 {
-    CCDictionary* infos =  event != NULL ? (CCDictionary*) event->getUserData() : NULL;
-    std::string value = initialText;
-    if(infos != NULL && linkTo != NULL && linkTo->getID() == TOINT(infos->objectForKey("Identifier")))
+    ValueMap infos = (event != NULL && event->getUserData() != NULL) ? ((Value*)event->getUserData())->asValueMap() : ValueMap();
+    if(linkTo != NULL &&
+       isValueOfType(infos["Identifier"], INTEGER) &&
+       isValueOfType(infos["SelectedValue"], STRING) &&
+       linkTo->getID() == infos["Identifier"].asInt())
     {
-        value = TOCSTRING(infos->objectForKey("SelectedValue"));
+        setLabelSelectedValue(infos["SelectedValue"].asString());
     }
-    setLabelSelectedValue(value);
 }
 
 void DropDownList::setLabelSelectedValue(std::string selectedValue)
@@ -125,9 +126,13 @@ void DropDownList::setTitle(std::string title)
     dropList->setTitle(title);
 }
 
-void DropDownList::showDropDownList()
+void DropDownList::showDropDownList(EventCustom* event)
 {
-    dropList->show();
+    ValueMap infos = (event != NULL && event->getUserData() != NULL) ? ((Value*)event->getUserData())->asValueMap() : ValueMap();
+    if(isValueOfType(infos["Sender"], INTEGER) && getID() == infos["Sender"].asInt())
+    {
+        dropList->show();
+    }
 }
 
 NS_FENNEX_END

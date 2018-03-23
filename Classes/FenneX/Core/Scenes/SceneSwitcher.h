@@ -46,7 +46,7 @@ class SceneSwitcher : public Ref
     
 public:
     static SceneSwitcher* sharedSwitcher();
-    void initWithScene(SceneName nextScene, CCDictionary* param = NULL);
+    void initWithScene(SceneName nextScene, ValueMap param = ValueMap());
     void trySceneSwitch(float deltaTime = 0);
     void planSceneSwitch(EventCustom* event);
     //A cancel will ignore next scene and directly jump to the queued scene
@@ -55,6 +55,9 @@ public:
     ~SceneSwitcher();
     
     bool isSwitching();
+    
+    // This function allow you to reload a scene that is already loaded. Be careful, it's your reponsibility to reload the state of the scene.
+    void allowReload();
 protected:
     void init();
     void replaceScene();
@@ -66,13 +69,14 @@ protected:
     bool frameDelay;
     bool sceneSwitchCancelled;
     SceneName queuedScene; //in case there is already a nextScene (meaning you call next scene switch during a scene switch), queue another one. In case there is already one queued, it's replaced
-    CCDictionary* queuedParam;
-    CCDictionary* nextSceneParam;
+    ValueMap queuedParam;
+    ValueMap nextSceneParam;
     bool processingSwitch;
     bool isEventFired;
     float delayReplace;
     //The key for keyboard lock during scene switch
     int keyboardLock;
+    bool reloadAllowed = false;
     
     EventListenerCustom* planSceneSwitchListener;
 };

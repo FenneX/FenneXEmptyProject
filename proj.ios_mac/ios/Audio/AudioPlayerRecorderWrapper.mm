@@ -66,7 +66,7 @@ std::string AudioPlayerRecorder::getSoundsSavePath()
     return [iosString UTF8String];
 }
 
-void AudioPlayerRecorder::record(const std::string&  file, Ref* linkTo)
+void AudioPlayerRecorder::record(const std::string& file, FileLocation loc, Ref* linkTo)
 {
     CCAssert(recordEnabled, "Record is disabled, enable it before starting to record");
 	std::string withExtension = file + ".caf";
@@ -81,7 +81,7 @@ void AudioPlayerRecorder::record(const std::string&  file, Ref* linkTo)
             linkTo = noLinkObject;
         }
         this->setLink(linkTo);
-        this->setPath(withExtension);
+        this->setPath(withExtension, loc);
         [[AudioPlayerRecorderImpl sharedAudio] startRecording];
     }
 }
@@ -89,7 +89,7 @@ void AudioPlayerRecorder::record(const std::string&  file, Ref* linkTo)
 void AudioPlayerRecorder::stopRecording()
 {
     CCAssert(recordEnabled, "Record is disabled, enable it before calling stopRecording");
-    [[AudioPlayerRecorderImpl sharedAudio] stopRecording:getNSString(path)];
+    [[AudioPlayerRecorderImpl sharedAudio] stopRecording:getNSString(getFullPath(path, location))];
     link = NULL; //don't call setLink to avoid infinite recursion
     this->setPath("");
 }
@@ -160,11 +160,6 @@ void AudioPlayerRecorder::restart()
     [[AudioPlayerRecorderImpl sharedAudio] restart];    
 }
 
-void AudioPlayerRecorder::deleteFile(const std::string& file)
-{
-    [[AudioPlayerRecorderImpl sharedAudio] deleteFile:getNSString(file)];
-}
-
 float AudioPlayerRecorder::getPlaybackRate()
 {
     return [AudioPlayerRecorderImpl sharedAudio].playbackRate;
@@ -175,7 +170,7 @@ void AudioPlayerRecorder::setPlaybackRate(float rate)
     [AudioPlayerRecorderImpl sharedAudio].playbackRate = rate;
 }
 
-CCDictionary* AudioPlayerRecorder::getFileMetadata(const std::string& path)
+ValueMap AudioPlayerRecorder::getFileMetadata(const std::string& path)
 {
     NSString* file = [NSString stringWithUTF8String:path.c_str()];
     //try sound in bundle first
@@ -189,23 +184,23 @@ CCDictionary* AudioPlayerRecorder::getFileMetadata(const std::string& path)
 #if VERBOSE_AUDIO
             NSLog(@"Warning : file %@ does not exist", file);
 #endif
-            return NULL;
+            return ValueMap();
         }
     }
     AVURLAsset *asset = [AVURLAsset URLAssetWithURL:url options:nil];
     NSArray *metadata = [asset commonMetadata];
-    CCDictionary* ccMetadata = Dcreate();
-    ccMetadata->setObject(Icreate(getSoundDuration(path)), "Duration");
+    ValueMap ccMetadata = ValueMap();
+    ccMetadata["Duration"] = Value(getSoundDuration(path));
     for(AVMetadataItem* item in metadata) 
     {
         //Get the relevant metadata, currently title and artist
         if([[item commonKey] isEqual:@"title"])
         {
-            ccMetadata->setObject(Screate([item stringValue].UTF8String), "Title");
+            ccMetadata["Title"] = Value([item stringValue].UTF8String);
         }
         else if([[item commonKey] isEqual:@"artist"])
         {
-            ccMetadata->setObject(Screate([item stringValue].UTF8String), "Author");
+            ccMetadata["Author"] = Value([item stringValue].UTF8String);
         }
         //Uncomment to see what key/value are available in your files
         //log("key = %s, value = %s", [item commonKey].UTF8String, [item stringValue].UTF8String);

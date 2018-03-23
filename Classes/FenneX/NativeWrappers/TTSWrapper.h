@@ -48,9 +48,15 @@ void setTTSPlayRate(float rate);
 
 std::string getTTSEngineName();
 
+// Return mapof all the text to speech engine, name as key (identifier), label as values
+std::map<std::string, std::string> getTTSEngines();
+
+// Set the using tts engine for the running app
+void setTTSEngine(std::string engineName);
+
 static inline void notifyTTSDone(int speechID)
 {
-    DelayedDispatcher::eventAfterDelay("TTSDone", DcreateP(Icreate(speechID), Screate("Identifier"), NULL), 0.01);
+    DelayedDispatcher::eventAfterDelay("TTSDone", Value(ValueMap({{"Identifier", Value(speechID)}})), 0.01);
 }
 
 #endif /* defined(__FenneX__TTSWrapper_h) */

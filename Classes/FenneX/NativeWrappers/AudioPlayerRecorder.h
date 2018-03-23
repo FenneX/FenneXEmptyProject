@@ -25,8 +25,10 @@ THE SOFTWARE.
 #ifndef FenneX_AudioPlayerRecorder_h
 #define FenneX_AudioPlayerRecorder_h
 
-#include "FenneX.h"
+#include "FenneXMacros.h"
+#include "cocos2d.h"
 #include "Shorteners.h"
+#include "FileUtility.h"
 USING_NS_CC;
 USING_NS_FENNEX;
 
@@ -41,6 +43,7 @@ USING_NS_FENNEX;
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS || CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
 //use native calls for play/record. The extension is left to the implementation
 //currently record as .caf on iOS and as .3gp on Android
+//The filename to read MUST be accessible via FileUtility findFullPath. In doubt, just use an absolute path
 //TODO : unify as only 1 audio format (wav for example)
 //Warning : incompatible with VideoRecorder (picking video from camera) on iOS
 /* If the app crash on record on Android, check that you have those lines in your AndroidManifest.xml :
@@ -87,7 +90,7 @@ public:
     bool isRecording();
     bool isPlaying();
     
-    void record(const std::string& file, Ref* linkTo);
+    void record(const std::string& file, FileLocation location, Ref* linkTo);
     void stopRecording();
     // volume is between 0 and 1, 1 is default value. Must be set just after the start of the sound.
     float play(const std::string& file, Ref* linkTo, bool independent = false, float volume = 1); //return the duration of the file
@@ -97,9 +100,6 @@ public:
     void play();
     void pause();
     void restart();
-    
-    //deleteFile requires the full path including the extension
-    void deleteFile(const std::string& file);
     
     //Must be called before playing a sound. The rate is global for all subsequent play sound
     float getPlaybackRate();
@@ -118,13 +118,14 @@ public:
         - Duration (CCInteger, as seconds)
      Anything can be NULL, including the returned Dictionary if something went wrong or not implemented
      */
-    static CCDictionary* getFileMetadata(const std::string& path);
+    static ValueMap getFileMetadata(const std::string& path);
 protected:
     AudioPlayerRecorder();
     void init();
     Ref* link; //the object that required the record/play
     std::string path; //the current path being recorded/played
-    void setPath(const std::string& value);
+    FileLocation location; //For record only right now, Playing will use findFullPath
+    void setPath(const std::string& value, FileLocation loc = FileLocation::ApplicationSupport);
     void setLink(Ref* value);
     bool recordEnabled;
     

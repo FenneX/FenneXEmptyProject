@@ -24,6 +24,7 @@ THE SOFTWARE.
 
 #include "StringUtility.h"
 #include "Shorteners.h"
+#include "FileUtility.h"
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
 #include <codecvt>
 #endif
@@ -32,56 +33,6 @@ THE SOFTWARE.
 #include <iomanip>
 
 NS_FENNEX_BEGIN
-bool arrayContainsString(CCArray* list, CCString* string)
-{
-    Ref* obj;
-    CCARRAY_FOREACH(list, obj)
-    {
-        if(string->isEqual(obj))
-            return true;
-    }
-    return false;
-}
-
-int arrayGetStringIndex(CCArray* list, CCString* string)
-{
-    for(int i = 0; i < list->count(); i++)
-    {
-        Ref* obj = list->objectAtIndex(i);
-        if(string->isEqual(obj))
-            return i;
-    }
-    return -1;
-}
-
-void arrayRemoveString(CCArray* list, CCString* string)
-{
-    
-    Ref* obj;
-    CCARRAY_FOREACH(list, obj)
-    {
-        if(string->isEqual(obj))
-        {
-            list->removeObject(obj);
-            return;
-        }
-    }
-}
-
-void arrayRemoveStringFromOther(CCArray* list, CCArray* other)
-{
-    
-    Ref* obj;
-    CCArray* objectsToRemove = Acreate();
-    CCARRAY_FOREACH(list, obj)
-    {
-        if(isKindOfClass(obj, CCString) && arrayContainsString(other, (CCString*)obj))
-        {
-            objectsToRemove->addObject(obj);
-        }
-    }
-    list->removeObjectsInArray(objectsToRemove);
-}
 
 std::vector<std::pair<std::string, std::string>>* getConversions()
 {
@@ -184,6 +135,13 @@ std::string lowerCase(std::string text)
         }
     }
     return to;
+}
+
+bool stringStartsWith(std::string str, std::string prefix)
+{
+    if (prefix.length() >  str.length())
+        return false;
+    return str.substr(0, prefix.length()) == prefix;
 }
 
 bool stringEndsWith(std::string str, std::string suffix)
@@ -290,6 +248,28 @@ std::vector<std::string> split(const std::string& s, char seperator)
     }
     output.push_back(s.substr(prev_pos, pos-prev_pos)); // Last word
     return output;
+}
+
+std::string string_format(const std::string fmt, ...)
+{
+    int size = ((int)fmt.size()) * 2 + 50;   // Use a rubric appropriate for your code
+    std::string str;
+    va_list ap;
+    while (1) {     // Maximum two passes on a POSIX system...
+        str.resize(size);
+        va_start(ap, fmt);
+        int n = vsnprintf((char *)str.data(), size, fmt.c_str(), ap);
+        va_end(ap);
+        if (n > -1 && n < size) {  // Everything worked
+            str.resize(n);
+            return str;
+        }
+        if (n > -1)  // Needed size returned
+            size = n + 1;   // For null char
+        else
+            size *= 2;      // Guess at a larger size (OS specific)
+    }
+    return str;
 }
 
 NS_FENNEX_END

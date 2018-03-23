@@ -25,7 +25,11 @@ THE SOFTWARE.
 #ifndef FenneX_VideoPlayer_h
 #define FenneX_VideoPlayer_h
 
-#include "FenneX.h"
+#include "FenneXMacros.h"
+#include "cocos2d.h"
+#include "DelayedDispatcher.h"
+#include "FileUtility.h"
+
 USING_NS_CC;
 USING_NS_FENNEX;
 
@@ -36,6 +40,7 @@ USING_NS_FENNEX;
 class VideoPlayer : public Ref
 {
 public:
+    // Use an absolute path
     VideoPlayer(std::string file, Vec2 position, cocos2d::Size size, bool front = true, bool loop = true);
     ~VideoPlayer();
 #if CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
@@ -45,7 +50,7 @@ public:
     //It also support more formats
     static void setUseVLC(bool useVLC);
 #endif
-    void setPlayerPosition(Vec2 position, cocos2d::Size size);
+    void setPlayerPosition(Vec2 position, cocos2d::Size size, bool animated = false);
     void play();
     void pause();
     void stop();
@@ -60,16 +65,20 @@ public:
     float getPosition();
     void setPosition(float position);
     
-    //Return the path of the thumbnail (use getLocalPath to get the absolute path)
-    //May return NULL if there was a problem generating the thumbnail
-    static std::string getThumbnail(const std::string& path);
+    void setMuted(bool muted);
+    
+    /**
+     * Return the path of the thumbnail (PNG file), absolute path, without extension
+     * May return NULL if there was a problem generating the thumbnail
+     * path and videoLocation represent where to find the video
+     * thumbnailPath and thumbnailLocation represent where to save the thumbnail. If thumbnailPath is empty, path will be used with the add of "-thumbnail" at the end of it
+     * Default value are legacy behavior
+    **/
+    static std::string getThumbnail(const std::string& path, FileLocation videoLocation = FileLocation::Absolute, const std::string& thumbnailPath = "", FileLocation thumbnailLocation = FileLocation::Local);
     
     //Return the size of the video
     //May return (0,0) if there was a problem with the video
-    static cocos2d::Size getVideoSize(const std::string& path);
-    
-    //TODO : Add iOS implementation
-    static bool isValidVideo(const std::string& filePath);
+    static cocos2d::Size getVideoSize(const std::string& path, FileLocation location = FileLocation::Absolute);
     
     //On iOS, always returns true for external videos and will notify VideoExists/VideoRemoved with a CCDictionary containing Path key with a CCString
     //For trimmed video (picked from library) on iOS and all video on Android, directly return the right value
@@ -81,27 +90,27 @@ private:
 
 static inline void notifyVideoDurationAvailable(std::string path, float duration)
 {
-    DelayedDispatcher::eventAfterDelay("VideoDurationAvailable", DcreateP(Screate(path), Screate("Path"), Fcreate(duration), Screate("Duration"), NULL), 0.01);
+    DelayedDispatcher::eventAfterDelay("VideoDurationAvailable", Value(ValueMap({{"Path", Value(path)}, {"Duration", Value(duration)}})), 0.01);
 }
 
 static inline void notifyVideoEnded(std::string path)
 {
-    DelayedDispatcher::eventAfterDelay("VideoEnded", DcreateP(Screate(path), Screate("Path"), NULL), 0.01);
+    DelayedDispatcher::eventAfterDelay("VideoEnded", Value(ValueMap({{"Path", Value(path)}})), 0.01);
 }
 
 static inline void notifyVideoError(std::string path)
 {
-    DelayedDispatcher::eventAfterDelay("VideoError", DcreateP(Screate(path), Screate("Path"), NULL), 0.01);
+    DelayedDispatcher::eventAfterDelay("VideoError", Value(ValueMap({{"Path", Value(path)}})), 0.01);
 }
 
 static inline void notifyVideoExists(std::string path)
 {
-    DelayedDispatcher::eventAfterDelay("VideoExists", DcreateP(Screate(path), Screate("Path"), NULL), 0.01);
+    DelayedDispatcher::eventAfterDelay("VideoExists", Value(ValueMap({{"Path", Value(path)}})), 0.01);
 }
 
 static inline void notifyVideoRemoved(std::string path)
 {
-    DelayedDispatcher::eventAfterDelay("VideoRemoved", DcreateP(Screate(path), Screate("Path"), NULL), 0.01);
+    DelayedDispatcher::eventAfterDelay("VideoRemoved", Value(ValueMap({{"Path", Value(path)}})), 0.01);
 }
 
 #endif /* defined(__FenneX__VideoPlayer__) */

@@ -390,7 +390,12 @@ RawObject* GraphicLayer::duplicateObject(RawObject* otherObject)
 {
     RawObject* obj = NULL;
     //Create the object, set Position + other properties
-    if(isKindOfClass(otherObject, Image))
+    if(isKindOfClass(otherObject, DropDownList))
+    {
+        DropDownList* otherList = (DropDownList*)otherObject;
+        obj = new DropDownList(otherList->getImageFile(), otherList->getPosition());
+    }
+    else if(isKindOfClass(otherObject, Image))
     {
         Image* otherImage = (Image*)otherObject;
         if(otherImage->isAnimation())
@@ -423,7 +428,7 @@ RawObject* GraphicLayer::duplicateObject(RawObject* otherObject)
     else if(isKindOfClass(otherObject, CustomObject) && isKindOfClass(otherObject->getNode(), ui::Scale9Sprite))
     {
         ui::Scale9Sprite* otherNode = (ui::Scale9Sprite*)otherObject->getNode();
-        ui::Scale9Sprite* node = ui::Scale9Sprite::create(TOCSTRING(otherObject->getEventInfos()->objectForKey("spriteFrame")), Rect(0, 0, 0, 0), otherNode->getCapInsets());
+        ui::Scale9Sprite* node = ui::Scale9Sprite::create(otherObject->getEventInfos()["spriteFrame"].asString(), Rect(0, 0, 0, 0), otherNode->getCapInsets());
         node->setPosition(otherNode->getPosition());
         node->setPreferredSize(otherNode->getPreferredSize());
         node->setAnchorPoint(otherNode->getAnchorPoint());
@@ -451,15 +456,19 @@ RawObject* GraphicLayer::duplicateObject(RawObject* otherObject)
     obj->setScaleX(otherObject->getScaleX());
     obj->setScaleY(otherObject->getScaleY());
     obj->getNode()->setRotation(otherObject->getNode()->getRotation());
+    obj->setOpacity(otherObject->getOpacity());
     
     //Recursively add children for Panel
     if(isKindOfClass(otherObject, Panel))
     {
+        bool needLink = false;
         for(RawObject* otherChild : ((Panel*)otherObject)->getChildren())
         {
             RawObject* child = duplicateObject(otherChild);
             placeObject(child, (Panel*)obj);
+            if(isKindOfClass(child, DropDownList)) needLink = true;
         }
+        if(needLink) linkInputLabels();
     }
     return obj;
 }
@@ -611,35 +620,6 @@ void GraphicLayer::destroyObjectEvent(EventCustom* event)
         else
         {
             log("Warning : sent a non RawObject to destroyObject, ignoring it");
-        }
-#endif
-    }
-}
-void GraphicLayer::destroyObjectsEvent(EventCustom* event)
-{
-    if(event != NULL && event->getUserData() != NULL)
-    {
-        if(isKindOfClass((Ref*)event->getUserData(), CCArray))
-        {
-            CCArray* array = (CCArray*)event->getUserData();
-            for(long i = 0; i < array->count(); i++)
-            {
-                if(isKindOfClass(array->objectAtIndex(i), RawObject))
-                {
-                    this->destroyObject((RawObject*)array->objectAtIndex(i));
-                }
-#if VERBOSE_WARNING
-                else
-                {
-                    log("Warning : array contains non RawObject in destroyObjects, ignoring that value");
-                }
-#endif
-            }
-        }
-#if VERBOSE_WARNING
-        else
-        {
-            log("Warning : sent a non CCArray to destroyObjects, ignoring it");
         }
 #endif
     }
@@ -950,11 +930,14 @@ Vec2 GraphicLayer::getPositionRelativeToObject(Vec2 point, RawObject* obj)
         parents.pushBack(parent);
         parent = this->getContainingPanel(parent);
     }
+    //In addition to panels, base Layer position and scale must be taken in account
+    realPosition.x = (realPosition.x) / layer->getScaleX() - layer->getPosition().x;
+    realPosition.y = (realPosition.y) / layer->getScaleY() - layer->getPosition().y;
     for(long i = parents.size() - 1; i >= 0; i--)
     {
         parent = parents.at(i);
-        realPosition.x = (realPosition.x - parent->getPosition().x + parent->getNode()->getAnchorPoint().x * parent->getSize().width) / parent->getScale();
-        realPosition.y = (realPosition.y - parent->getPosition().y + parent->getNode()->getAnchorPoint().y * parent->getSize().height) / parent->getScale();
+        realPosition.x = (realPosition.x - parent->getPosition().x) / parent->getScaleX() + parent->getNode()->getAnchorPoint().x * parent->getSize().width;
+        realPosition.y = (realPosition.y - parent->getPosition().y) / parent->getScaleY() + parent->getNode()->getAnchorPoint().y * parent->getSize().height;
     }
     return realPosition;
 }
@@ -965,10 +948,13 @@ Vec2 GraphicLayer::getRealPosition(RawObject* obj)
     RawObject* parent = this->getContainingPanel(obj);
     while(parent != NULL)
     {
-        realPosition.x = realPosition.x * parent->getScale() + parent->getPosition().x;
-        realPosition.y = realPosition.y * parent->getScale() + parent->getPosition().y;
+        realPosition.x = realPosition.x * parent->getScaleX() + parent->getPosition().x;
+        realPosition.y = realPosition.y * parent->getScaleY() + parent->getPosition().y;
         parent = this->getContainingPanel(parent);
     }
+    //In addition to panels, base Layer position and scale must be taken in account
+    realPosition.x = realPosition.x * layer->getScaleX() + layer->getPosition().x;
+    realPosition.y = realPosition.y * layer->getScaleY() + layer->getPosition().y;
     return realPosition;
 }
 
@@ -979,10 +965,13 @@ Vec2 GraphicLayer::getCenterRealPosition(RawObject* obj)
     RawObject* parent = this->getContainingPanel(obj);
     while(parent != NULL)
     {
-        realPosition.x = (realPosition.x - parent->getNode()->getAnchorPoint().x * parent->getSize().width) * parent->getScale() + parent->getPosition().x;
-        realPosition.y = (realPosition.y - parent->getNode()->getAnchorPoint().y * parent->getSize().height) * parent->getScale() + parent->getPosition().y;
+        realPosition.x = (realPosition.x - parent->getNode()->getAnchorPoint().x * parent->getSize().width) * parent->getScaleX() + parent->getPosition().x;
+        realPosition.y = (realPosition.y - parent->getNode()->getAnchorPoint().y * parent->getSize().height) * parent->getScaleY() + parent->getPosition().y;
         parent = this->getContainingPanel(parent);
     }
+    //In addition to panels, base Layer position and scale must be taken in account
+    realPosition.x = (realPosition.x) * layer->getScaleX() + layer->getPosition().x;
+    realPosition.y = (realPosition.y) * layer->getScaleY() + layer->getPosition().y;
     return realPosition;
 }
 
@@ -1014,6 +1003,8 @@ float GraphicLayer::getRealScale(RawObject* obj)
         realScale *= parent->getScale();
         parent = this->getContainingPanel(parent);
     }
+    //In addition to panels, base Layer scale must be taken in account
+    realScale *= layer->getScale();
     return realScale;
 }
 
@@ -1026,6 +1017,8 @@ float GraphicLayer::getRealScaleX(RawObject* obj)
         realScale *= parent->getScaleX();
         parent = this->getContainingPanel(parent);
     }
+    //In addition to panels, base Layer scale must be taken in account
+    realScale *= layer->getScaleX();
     return realScale;
 }
 
@@ -1038,6 +1031,8 @@ float GraphicLayer::getRealScaleY(RawObject* obj)
         realScale *= parent->getScaleY();
         parent = this->getContainingPanel(parent);
     }
+    //In addition to panels, base Layer scale must be taken in account
+    realScale *= layer->getScaleY();
     return realScale;
 }
 
@@ -1045,9 +1040,9 @@ bool GraphicLayer::touchAtPosition(Vec2 position, bool event)
 {
 #if VERBOSE_GENERAL_INFO
     log("Before trying touchAtPosition, obj order :");
-    for(long i =  storedObjects->count() - 1; i >= 0; i--)
+    for(long i =  storedObjects.size() - 1; i >= 0; i--)
     {
-        RawObject* obj = (RawObject*)storedObjects->objectAtIndex(i);
+        RawObject* obj = storedObjects.at(i);;
         log("obj name: %s", obj->getName().c_str());
     }
 #endif
@@ -1090,20 +1085,23 @@ bool GraphicLayer::touchObject(RawObject* obj, bool event, Vec2 position)
     {
         if(event)
         {
-            CCDictionary* infos = obj->getEventInfos();
-            infos->setObject(Pcreate(position), "TouchPosition");
-            Director::getInstance()->getEventDispatcher()->dispatchCustomEvent(obj->getEventName(), infos);
-            CCString* trackingName = (CCString*)obj->getEventInfos()->objectForKey("TrackingName");
+            ValueMap infos = obj->getEventInfos();
+            infos["TouchPositionX"] = Value(position.x);
+            infos["TouchPositionY"] = Value(position.y);
+            Value val = Value(infos);
+            Director::getInstance()->getEventDispatcher()->dispatchCustomEvent(obj->getEventName(), &val);
             //In VideoView, buttons are only tracked if the video meet the minimum duration
-            if(trackingName != NULL)
+            if(isValueOfType(obj->getEventInfos()["TrackingName"], STRING))
             {
-                CCString* trackingInfo = (CCString*) obj->getEventInfos()->objectForKey("TrackingInfo");
-                if(trackingInfo != NULL)
+                std::string trackingName = obj->getEventInfos()["TrackingName"].asString();
+                std::string trackingInfo = "";
+                if(isValueOfType(obj->getEventInfos()["TrackingInfo"], STRING))
                 {
-                    trackingInfo = (CCString*) obj->getEventInfos()->objectForKey(trackingInfo->getCString());
+                    trackingInfo = obj->getEventInfos()["TrackingInfo"].asString();
+                    trackingInfo = isValueOfType(obj->getEventInfos()[trackingInfo], STRING) ? obj->getEventInfos()[trackingInfo].asString() : "";
                 }
-                CCString* trackingLabel = (CCString*) obj->getEventInfos()->objectForKey("TrackingLabel");
-                AnalyticsWrapper::logEvent(trackingName->_string, trackingInfo != NULL ? trackingInfo->getCString() : trackingLabel != NULL ? trackingLabel->_string : "");
+                std::string trackingLabel = isValueOfType(obj->getEventInfos()["TrackingLabel"], STRING) ? obj->getEventInfos()["TrackingLabel"].asString() : "";
+                AnalyticsWrapper::logEvent(trackingName, !trackingInfo.empty() ? trackingInfo : !trackingLabel.empty() ? trackingLabel : "");
             }
         }
         return true;
@@ -1344,7 +1342,7 @@ void GraphicLayer::loadBaseNodeAttributes(CustomBaseNode* node, RawObject* obj)
 #if VERBOSE_LOAD_CCB
             log("setting scene : %d", node->getScene());
 #endif
-            obj->setEventInfo(Icreate(node->getScene()), "Scene");
+            obj->setEventInfo("Scene", Value(node->getScene()));
         }
         if(node->getZindex() != 0)
         {

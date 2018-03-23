@@ -39,6 +39,7 @@ using namespace cocosbuilder;
 
 NS_FENNEX_BEGIN
 static float _loadingScale = 1;
+static Size _loadSize = Size(-1, -1);
 static bool isPhoneLayout = false;
 
 //Don't retain the CCBAnimationManager, because it's troublesome to release them at the right time. Soft references is enough.
@@ -71,10 +72,6 @@ void resizeChildren(Node* parentNode, Node* resizeNode, float usedScale, int dep
             log("input font size : %d, parent node scale : %f, dimensions : %f, %f, depth : %d", input->getFontSize(), parentNode->getScale(), input->getPreferredSize().width, input->getPreferredSize().height, depth);
 #endif
         }
-        else if(isKindOfClass(node, Sprite))
-        {
-            
-        }
         else if(isKindOfClass(node, ui::Scale9Sprite))
         {
             ui::Scale9Sprite* sprite = (ui::Scale9Sprite*)node;
@@ -83,6 +80,9 @@ void resizeChildren(Node* parentNode, Node* resizeNode, float usedScale, int dep
             sprite->setInsetLeft(sprite->getInsetRight() * usedScale);
             sprite->setInsetRight(sprite->getInsetRight() * usedScale);
             sprite->setInsetTop(sprite->getInsetTop() * usedScale);
+        }
+        else if(isKindOfClass(node, Sprite))
+        {
         }
         else  //Panel
         {
@@ -122,15 +122,19 @@ Panel* loadCCBFromFileToFenneX(std::string file, std::string inPanel, int zIndex
     log("Filepath : %s", filePath.c_str());
     FileUtils::getInstance()->setPopupNotify(shouldNotify);
     Node* myNode = NULL;
+    if(_loadSize.width == -1)
+    {
+        _loadSize = Director::getInstance()->getWinSize();
+    }
     if(FileUtils::getInstance()->isFileExist(filePath))
     {
         log("File exist");
-        myNode = ccbReader->readNodeGraphFromFile(filePath.c_str());
+        myNode = ccbReader->readNodeGraphFromFile(filePath.c_str(), nullptr, _loadSize);
     }
     else if(isPhoneLayout)
     {
         filePath = file + ".ccbi";
-        myNode = ccbReader->readNodeGraphFromFile(filePath.c_str());
+        myNode = ccbReader->readNodeGraphFromFile(filePath.c_str(), nullptr, _loadSize);
     }
     
 #if VERBOSE_PERFORMANCE_TIME
@@ -140,7 +144,7 @@ Panel* loadCCBFromFileToFenneX(std::string file, std::string inPanel, int zIndex
 #endif
     
     //Despite cocosbuilder saying so, Label and Node (for Panel) aren't resized properly, so there it is
-    /*Size frameSize = Director::getInstance()->getWinSize();
+    /*Size frameSize = CCBLoaderGetLoadSize();
      float scaleX = (float)frameSize.width / designResolutionSize.width;
      float scaleY = (float)frameSize.height / designResolutionSize.height;
      float scale = MAX(scaleX, scaleY);
@@ -182,6 +186,7 @@ Panel* loadCCBFromFileToFenneX(std::string file, std::string inPanel, int zIndex
         {
             node->setScaleX(node->getScaleX()*usedScale);
             node->setScaleY(node->getScaleY()*usedScale);
+            node->setContentSize(node->getContentSize() / node->getScaleX());
             Node* parentNode = node;
             
             for(auto nodeChild : node->getChildren())
@@ -209,16 +214,16 @@ Panel* loadCCBFromFileToFenneX(std::string file, std::string inPanel, int zIndex
                     log("input font size : %d, parent node scale : %f, dimensions : %f, %f, depth 1", input->getFontSize() , parentNode->getScale(), input->getPreferredSize().width, input->getPreferredSize().height);
 #endif
                 }
-                else if(isKindOfClass(nodeChild, Sprite))
-                {
-                    nodeChild->setScaleX(nodeChild->getScaleX() / usedScale);
-                    nodeChild->setScaleY(nodeChild->getScaleY() / usedScale);
-                }
                 else if(isKindOfClass(nodeChild, ui::Scale9Sprite))
                 {
                     nodeChild->setScaleX(nodeChild->getScaleX() / usedScale);
                     nodeChild->setScaleY(nodeChild->getScaleY() / usedScale);
                     nodeChild->setContentSize(SizeMult(nodeChild->getContentSize(), usedScale));
+                }
+                else if(isKindOfClass(nodeChild, Sprite))
+                {
+                    nodeChild->setScaleX(nodeChild->getScaleX() / usedScale);
+                    nodeChild->setScaleY(nodeChild->getScaleY() / usedScale);
                 }
                 else if(!nodeChild->getChildren().empty())//Panel
                 {
@@ -305,14 +310,6 @@ void loadNodeToFenneX(Node* baseNode, Panel* parent)
             Sprite* sprite = (Sprite*)node;
             result = layer->createDropDownListFromSprite(sprite, parent);
         }
-        else if(isKindOfClass(node, Sprite))
-        {
-#if VERBOSE_LOAD_CCB
-            log("image");
-#endif
-            Sprite* sprite = (Sprite*)node;
-            result = layer->createImageFromSprite(sprite, parent);
-        }
         else if(isKindOfClass(node, CustomInput))
         {
 #if VERBOSE_LOAD_CCB
@@ -347,6 +344,14 @@ void loadNodeToFenneX(Node* baseNode, Panel* parent)
 #endif
             ui::Scale9Sprite* sprite = (ui::Scale9Sprite*)node;
             result = layer->createCustomObjectFromNode(sprite, parent);
+        }
+        else if(isKindOfClass(node, Sprite))
+        {
+#if VERBOSE_LOAD_CCB
+            log("image");
+#endif
+            Sprite* sprite = (Sprite*)node;
+            result = layer->createImageFromSprite(sprite, parent);
         }
         else if(!isKindOfClass(node, ui::EditBox))
         {
@@ -397,22 +402,30 @@ void linkInputLabels()
                 input->setFontSize(input->getOriginalInfos()->getFontSize());
             }
         }
-        if((isKindOfClass(child, DropDownList)) && child->getEventInfos()->objectForKey("LinkTo") != NULL && isKindOfClass(child->getEventInfos()->objectForKey("LinkTo"), CCString))
+        if((isKindOfClass(child, DropDownList)) && isValueOfType(child->getEventInfos()["LinkTo"], STRING))
         {
             DropDownList* dropDownList = (DropDownList*)child;
             if(dropDownList->getLinkTo() == NULL)
             {
-                std::string linkTo = ((CCString*)child->getEventInfos()->objectForKey("LinkTo"))->getCString();
-                RawObject* match = layer->first([linkTo](RawObject* obj) {
-                    return obj->getName() == linkTo && isKindOfClass(obj, LabelTTF);
-                });
-                if(match != NULL)
+                std::string linkTo = child->getEventInfos()["LinkTo"].asString();
+                Panel* parent = layer->getContainingPanel(dropDownList);
+                for(RawObject* obj : parent != NULL ? parent->getChildren() : layer->all())
                 {
-                    dropDownList->setLinkTo((LabelTTF*)match);
+                    if(obj->getName() == linkTo && isKindOfClass(obj, LabelTTF)) dropDownList->setLinkTo((LabelTTF*)obj);
                 }
             }
         }
     }
+}
+
+void CCBLoaderSetLoadSize(Size loadSize)
+{
+    _loadSize = loadSize;
+}
+
+Size CCBLoaderGetLoadSize()
+{
+    return _loadSize;
 }
 
 void CCBLoaderSetScale(float scale)

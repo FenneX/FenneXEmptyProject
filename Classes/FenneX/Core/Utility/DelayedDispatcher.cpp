@@ -29,27 +29,25 @@
 NS_FENNEX_BEGIN
 
 static DelayedDispatcher* temporaryInstance = NULL;
-static SceneName temporaryInstanceScene = None;
+static Scene* temporaryInstanceScene = NULL;
 static EventListenerCustom* temporaryListener = NULL;
 
 
 DelayedDispatcher::~DelayedDispatcher()
 {
     temporaryInstance = NULL;
-    temporaryInstanceScene = None;
+    temporaryInstanceScene = NULL;
 }
 
-void DelayedDispatcher::eventAfterDelay(std::string eventName, Ref* userData, float delay)
+void DelayedDispatcher::eventAfterDelay(std::string eventName, Value userData, float delay)
 {
     DelayedDispatcher* instance = getInstance();
-    IFEXIST(userData)->retain();
     instance->events.push_back(EventTuple(delay, eventName, userData));
 }
 
-void DelayedDispatcher::funcAfterDelay(std::function<void(EventCustom*)> func, Ref* userData, float delay, std::string eventName)
+void DelayedDispatcher::funcAfterDelay(std::function<void(EventCustom*)> func, Value userData, float delay, std::string eventName)
 {
     DelayedDispatcher* instance = getInstance();
-    IFEXIST(userData)->retain();
     instance->funcs.push_back(FuncTuple(delay, func, userData, eventName));
 }
 
@@ -88,8 +86,7 @@ void DelayedDispatcher::update(float deltaTime)
 #if VERBOSE_GENERAL_INFO
         log("Launching event %s", std::get<1>(tuple).c_str());
 #endif
-        Director::getInstance()->getEventDispatcher()->dispatchCustomEvent(std::get<1>(tuple), std::get<2>(tuple));
-        IFEXIST(std::get<2>(tuple))->release();
+        Director::getInstance()->getEventDispatcher()->dispatchCustomEvent(std::get<1>(tuple), &std::get<2>(tuple));
     }
     if(events.size() > 0)
     {
@@ -107,12 +104,11 @@ void DelayedDispatcher::update(float deltaTime)
     }
     for(FuncTuple& tuple : funcsToCall)
     {
-        EventCustom* event = EventCustom::create(std::get<3>(tuple), std::get<2>(tuple));
+        EventCustom* event = EventCustom::create(std::get<3>(tuple), &std::get<2>(tuple));
 #if VERBOSE_GENERAL_INFO
             log("Launching func named %s", std::get<3>(tuple).c_str());
 #endif
         std::get<1>(tuple)(event);
-        IFEXIST(std::get<2>(tuple))->release();
     }
     if(funcs.size() > 0)
     {
@@ -126,15 +122,18 @@ DelayedDispatcher* DelayedDispatcher::getInstance()
     //A DelayedDispatcher must be linked to a scene to keep old behavior (delayed funcs/events don't last more than the scene they were created on)
     if(SceneSwitcher::sharedSwitcher()->getCurrentScene() == NULL)
     {
-        if(temporaryInstance != NULL && temporaryInstanceScene == None) return temporaryInstance;
+        if(temporaryInstance != NULL && temporaryInstanceScene == NULL) return temporaryInstance;
         //Hack around the fact that DelayedDispatcher can be called during Scene init: create a temporaryInstance that will be added to the Scene when the switch ends
         temporaryInstance = new DelayedDispatcher();
-        temporaryInstanceScene = None;
+        temporaryInstanceScene = NULL;
         temporaryListener = Director::getInstance()->getEventDispatcher()->addCustomEventListener("SceneSwitched", [](EventCustom*)
           {
+              int refCount = temporaryInstance->getReferenceCount();
               SceneSwitcher::sharedSwitcher()->getCurrentScene()->addUpdatable(temporaryInstance);
               Director::getInstance()->getEventDispatcher()->removeEventListener(temporaryListener);
-              temporaryInstance->release();
+              if(temporaryInstance->getReferenceCount() > refCount)
+                  temporaryInstance->release(); // If it was already added, it won't retain again, so the ref count won't be incremented
+              
               temporaryListener = NULL;
               temporaryInstance = NULL;
           });
@@ -150,12 +149,17 @@ DelayedDispatcher* DelayedDispatcher::getInstance()
         }
     }
     //Hack around the fact the addUpdatable is not instant, it is necessary to avoid recreating several DelayedDispatcher until it's accessible using getUpdateList
-    if(temporaryInstance != NULL && temporaryInstanceScene == SceneSwitcher::sharedSwitcher()->getCurrentSceneName()) return temporaryInstance;
+    if(temporaryInstance != NULL && temporaryInstanceScene == SceneSwitcher::sharedSwitcher()->getCurrentScene()) return temporaryInstance;
     DelayedDispatcher* newInstance = new DelayedDispatcher();
     SceneSwitcher::sharedSwitcher()->getCurrentScene()->addUpdatable(newInstance);
     newInstance->release();
+    if(temporaryInstance != NULL)
+    {
+        SceneSwitcher::sharedSwitcher()->getCurrentScene()->removeUpdatable(temporaryInstance);
+        temporaryInstance = NULL;
+    }
     temporaryInstance = newInstance;
-    temporaryInstanceScene = SceneSwitcher::sharedSwitcher()->getCurrentSceneName();
+    temporaryInstanceScene = SceneSwitcher::sharedSwitcher()->getCurrentScene();
     return newInstance;
 }
 

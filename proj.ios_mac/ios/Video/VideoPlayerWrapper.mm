@@ -49,7 +49,7 @@ VideoPlayer::~VideoPlayer()
 }
 
 
-void VideoPlayer::setPlayerPosition(Vec2 position, cocos2d::Size size)
+void VideoPlayer::setPlayerPosition(Vec2 position, cocos2d::Size size, bool animated)
 {
     cocos2d::GLView *glview = cocos2d::Director::getInstance()->getOpenGLView();
     CCEAGLView *eaglview = (CCEAGLView*) glview->getEAGLView();
@@ -57,7 +57,8 @@ void VideoPlayer::setPlayerPosition(Vec2 position, cocos2d::Size size)
     [TYPED_DELEGATE setPlayerPosition:CGPointMake(position.x / scaleFactor,
                                                   position.y / scaleFactor)
                                  size:CGSizeMake(size.width/ scaleFactor,
-                                                 size.height/ scaleFactor)];
+                                                 size.height/ scaleFactor)
+                             animated:animated];
 }
 
 void VideoPlayer::play()
@@ -115,21 +116,33 @@ void VideoPlayer::setPosition(float position)
     [TYPED_DELEGATE setPosition:position];
 }
 
-std::string VideoPlayer::getThumbnail(const std::string& path)
+void VideoPlayer::setMuted(bool muted)
 {
-    NSString* thumbnailPath = [VideoPlayerImplIOS getThumbnail:[NSString stringWithUTF8String:path.c_str()]];
-    return thumbnailPath != nil ? [thumbnailPath UTF8String] : "";
+    TYPED_DELEGATE.muted = muted;
 }
 
-cocos2d::Size VideoPlayer::getVideoSize(const std::string& path)
+std::string VideoPlayer::getThumbnail(const std::string& path, FileLocation videoLocation, const std::string& thumbnailPath, FileLocation thumbnailLocation)
 {
-    CGSize size = [VideoPlayerImplIOS getVideoSize:[NSString stringWithUTF8String:path.c_str()]];
+    std::string fileName = thumbnailPath;
+    if(fileName.empty())
+    {
+        fileName = path;
+        if(videoLocation == FileLocation::Absolute && thumbnailLocation != FileLocation::Absolute && path.find_last_of('/') != std::string::npos)
+        { // If we are not using absolute for thumbnail but we use it for video, that mean we have a path to parse
+            fileName = path.substr(path.find_last_of('/') + 1);
+        }
+        fileName += "-thumbnail";
+    }
+    NSString* thumbnailPathString = [NSString stringWithUTF8String:getFullPath(fileName, thumbnailLocation).c_str()];
+    BOOL result = [VideoPlayerImplIOS getThumbnail:[NSString stringWithUTF8String:getFullPath(path, videoLocation).c_str()]
+                                     thumbnailName:thumbnailPathString];
+    return result ? [thumbnailPathString UTF8String] : "";
+}
+
+cocos2d::Size VideoPlayer::getVideoSize(const std::string& path, FileLocation location)
+{
+    CGSize size = [VideoPlayerImplIOS getVideoSize:[NSString stringWithUTF8String:getFullPath(path, location).c_str()]];
     return cocos2d::Size(size.width, size.height);
-}
-
-bool VideoPlayer::isValidVideo(const std::string& filePath)
-{
-    return true;
 }
 
 bool VideoPlayer::videoExists(const std::string& file)

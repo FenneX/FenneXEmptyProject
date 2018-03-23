@@ -25,7 +25,9 @@ THE SOFTWARE.
 #ifndef FenneX_VideoPickerWrapper_h
 #define FenneX_VideoPickerWrapper_h
 
-#include "FenneX.h"
+#include "cocos2d.h"
+#include "DelayedDispatcher.h"
+#include "FileUtility.h"
 
 USING_NS_FENNEX;
 
@@ -50,44 +52,44 @@ void stopVideoRecording();
 //Pass true to get a VideoRecordingCancelled when it's done
 bool cancelRecording(bool notify = true);
 
-bool pickVideoFromLibrary(const std::string& saveName);
+bool pickVideoFromLibrary(const std::string& saveName, FileLocation location);
 
-bool pickVideoFromCamera(const std::string& saveName);
+bool pickVideoFromCamera(const std::string& saveName, FileLocation location);
 
 //Will start the process of getting all videos path, names and duration, which will be notified with VideoFound, VideoNameResolved and VideoDurationAvailable (from VideoPlayer)
 //Current implementation is in the same thread for iOS, and in a different thread on Android (but still using all the resources)
 //Will throw a GetAllVideosFinished notification when it ends
 void getAllVideos();
 
-static inline void notifyVideoPicked(std::string name)
+static inline void notifyVideoPicked(std::string name, FileLocation location)
 {
-    DelayedDispatcher::eventAfterDelay("VideoPicked", DcreateP(Screate(name), Screate("Name"), NULL), 0.01);
+    DelayedDispatcher::eventAfterDelay("VideoPicked", Value(ValueMap({{"Name", Value(name)}, {"Location", Value((int)location)}})), 0.01);
 }
 
 static inline void notifyVideoFound(std::string fullPath)
 {
-    DelayedDispatcher::eventAfterDelay("VideoFound", DcreateP(Screate(fullPath), Screate("Path"), NULL), 0.01);
+    DelayedDispatcher::eventAfterDelay("VideoFound", Value(ValueMap({{"Path", Value(fullPath)}})), 0.01);
 }
 
 //This notification will be sent after VideoFound (it is necesary on iOS to be there because the reference URL is currently not saved) : you should save the name yourself if you need it
 static inline void notifyVideoName(std::string path, std::string name)
 {
-    DelayedDispatcher::eventAfterDelay("VideoNameResolved", DcreateP(Screate(name), Screate("Name"), Screate(path), Screate("Path"), NULL), 0.01);
+    DelayedDispatcher::eventAfterDelay("VideoNameResolved", Value(ValueMap({{"Name", Value(name)}, {"Path", Value(path)}})), 0.01);
 }
 
 static inline void notifyRecordingCancelled()
 {
-    DelayedDispatcher::eventAfterDelay("VideoRecordingCancelled", Dcreate(), 0.01);
+    DelayedDispatcher::eventAfterDelay("VideoRecordingCancelled", Value(), 0.01);
 }
 
 static inline void notifyGetAllVideosFinished()
 {
-    DelayedDispatcher::eventAfterDelay("GetAllVideosFinished", Dcreate(), 0.01);
+    DelayedDispatcher::eventAfterDelay("GetAllVideosFinished", Value(), 0.01);
 }
 
 static inline void notifyVideoPickCancelled()
 {
-    DelayedDispatcher::eventAfterDelay("VideoPickerCancelled", Dcreate(), 0.01);
+    DelayedDispatcher::eventAfterDelay("VideoPickerCancelled", Value(), 0.01);
 }
 
 #endif

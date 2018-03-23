@@ -1,27 +1,16 @@
 package com.fennex.modules;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-
-import org.videolan.libvlc.IVLCVout;
-import org.videolan.libvlc.LibVLC;
-import org.videolan.libvlc.Media;
-
 import android.annotation.TargetApi;
 import android.content.ContentResolver;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.Bitmap.CompressFormat;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
-import android.graphics.Bitmap.CompressFormat;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
+import android.media.ThumbnailUtils;
 import android.net.Uri;
-import android.opengl.Visibility;
 import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -32,6 +21,17 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.VideoView;
+
+import org.videolan.libvlc.IVLCVout;
+import org.videolan.libvlc.LibVLC;
+import org.videolan.libvlc.Media;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 
 public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerationError, Runnable
 {
@@ -46,23 +46,23 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 	 *   - videoView : the SurfaceView on which the video is played. It's either a VideoView or a SurfaceView (for LibVLC)
 	 */
 	public static String TAG = "VideoPlayer";
-	public static FrameLayout mainFrame = null;
+	private static FrameLayout mainFrame = null;
 	public static FrameLayout base = null;
-	public static SurfaceView videoView = null;
+	private static SurfaceView videoView = null;
 	public static String path;
-	public static float localX;
-	public static float localY;
-	public static float localHeight;
-	public static float localWidth;
-	public static boolean toFront;
-	public static boolean isFullScreen = false;
-	public static int widthScreen = NativeUtility.getMainActivity().getMainLayout().getWidth();
-	public static int heightScreen = NativeUtility.getMainActivity().getMainLayout().getHeight();
+	private static float localX;
+	private static float localY;
+	private static float localHeight;
+	private static float localWidth;
+	private static boolean toFront;
+	private static boolean isFullScreen = false;
+	private static int widthScreen = NativeUtility.getMainActivity().getMainLayout().getWidth();
+	private static int heightScreen = NativeUtility.getMainActivity().getMainLayout().getHeight();
 	//Used by VLC implementation only to keep the video size for setSurfaceSize (avoid flickering)
 	private static int currentVideoWidth;
 	private static int currentVideoHeight;
 	
-	public static boolean useVLC = false;
+	private static boolean useVLC = false;
 	
 	private static VideoPlayer instance = null;
 	
@@ -71,10 +71,13 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 	private static boolean hideOnPause;
 	private static boolean videoEnded; //Video ended is there because restart is different than play for LibVLC
 	private static float lastPlaybackRate; //Playback rate must be kept between sessions (when restarting video)
+	private static boolean muted = false;
 	private static org.videolan.libvlc.MediaPlayer vlcMediaPlayer;
 	private static org.videolan.libvlc.LibVLC libVLC;
 
 	private static org.videolan.libvlc.MediaPlayer.EventListener mPlayerListener = new MyPlayerListener(getInstance());
+
+	private static MediaPlayer videoViewMediaPlayer = null;
 
 	public static void setUseVLC(boolean use)
 	{
@@ -125,7 +128,9 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 		isPrepared = false;
 		shouldLoop = loop;
 		hideOnPause = false;
-		final File videoFile = getFile(path);
+		videoViewMediaPlayer = null;
+
+		final File videoFile = getFile(path, FileUtility.FileLocation.Unknown);
 		if(videoFile == null)
 		{
 			return;
@@ -182,7 +187,8 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
     					@Override
     					public void onPrepared(MediaPlayer mp) {
     						Log.i(TAG, "Video is prepared, playing it ...");
-    						isPrepared = true;
+							videoViewMediaPlayer = mp;
+							isPrepared = true;
     						play();
                     		NativeUtility.getMainActivity().runOnGLThread(new Runnable() 
                     		{
@@ -204,22 +210,22 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
     						}
     						else
     						{
-                        		NativeUtility.getMainActivity().runOnGLThread(new Runnable() 
-                        		{
-                        			public void run()
-        	            			{
-                        				notifyVideoEnded(path);
-        	            			}
-                        		});
                         		videoEnded = true;
     						}
+    						NativeUtility.getMainActivity().runOnGLThread(new Runnable()
+							{
+								public void run()
+								{
+									notifyVideoEnded(path);
+								}
+							});
     					}
     				});
     				video.setOnErrorListener(new MediaPlayer.OnErrorListener() {
 
 						@Override
 						public boolean onError(MediaPlayer mp, int what,
-								int extra) {
+											   int extra) {
 							Log.e(TAG, "VideoView error : " + what + ", " + extra);
                             NativeUtility.getMainActivity().runOnGLThread(new Runnable() {
                                 public void run() {
@@ -229,6 +235,7 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 							return false;
 						}
     				});
+
     				Uri uri = null;
     				if(videoFile.exists())
     					uri = Uri.fromFile(videoFile);
@@ -273,7 +280,7 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 		});
 	}
 
-	public static void setPlayerPosition(float x, float y, float height, float width)
+	public static void setPlayerPosition(float x, float y, float height, float width, boolean animated)
 	{
 		localX = x;
 		localY = y;
@@ -333,6 +340,7 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 				}});
 		}
 		videoEnded = false;
+		setMuted(muted);
 	}
 
 
@@ -441,7 +449,7 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 		if(useVLC)
 		{
 			//This force LibVLC to recalculate the surface size to a correct value. Put 1,1 to not have a visual glitch
-			getInstance().setSurfaceSize((int)currentVideoWidth,(int)currentVideoHeight,(int)currentVideoWidth,(int)currentVideoHeight,1,1);
+			getInstance().setSurfaceSize((int)currentVideoWidth,(int)currentVideoHeight);
 		}
 		else
 		{
@@ -542,38 +550,75 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 			((VideoView)videoView).seekTo((int)(position * 1000));
 		}
 	}
-	
-	public static String getThumbnail(String path)
+
+	public static void setMuted(boolean _muted)
 	{
-        File videoFile = getFile(path);
-		if(videoFile == null)
+		if(useVLC)
 		{
-			return null;
+			if(vlcMediaPlayer != null) {
+				vlcMediaPlayer.setVolume(_muted ? 0 : 100);
+			}
+			else
+			{
+				Log.e(TAG, "setMuted vlcMediaPlayer is Null");
+			}
 		}
-		//Get the video file name, without extension
-		String fileName = videoFile.getName().lastIndexOf('.') > -1 ? videoFile.getName().substring(0, videoFile.getName().lastIndexOf('.')) : videoFile.getName();
-		if(fileName.lastIndexOf('/') > 0)
+		else
 		{
-			fileName = fileName.substring(fileName.lastIndexOf('/') + 1);
+			muted = _muted;
+			try
+			{
+				if(videoViewMediaPlayer != null && videoViewMediaPlayer.isPlaying())
+				{
+					if (muted)
+						videoViewMediaPlayer.setVolume(0, 0);
+					else
+						videoViewMediaPlayer.setVolume(1.0f, 1.0f);
+				}
+			}
+			catch(Exception e)
+			{
+				Log.e(TAG, "setMuted Exception");
+				e.printStackTrace();
+			}
 		}
-		//Add -thumbnail. That's the path used by cocos2dx
-		String thumbPath = fileName + "-thumbnail";
-		//The full path used to save it, with local path and extension
-		String fullThumbPath = NativeUtility.getLocalPath().concat("/" + thumbPath + ".png");
-		File thumbImageFile = new File(fullThumbPath);
+	}
+	
+	public static String getThumbnail(String path, int videoLocation, String thumbnailPath, int thumbnailLocation)
+	{
+        File videoFile = getFile(path, FileUtility.FileLocation.valueOf(videoLocation));
+		if(videoFile == null) {
+            return null;
+        }
+		String thumbName = thumbnailPath;
+		if(thumbName.isEmpty())
+		{
+			//Get the video full path, without extension
+			String fileName = path.lastIndexOf('.') > -1 ? path.substring(0, path.lastIndexOf('.')) : path;
+			if(FileUtility.FileLocation.valueOf(videoLocation) == FileUtility.FileLocation.Absolute
+					&& FileUtility.FileLocation.valueOf(thumbnailLocation) != FileUtility.FileLocation.Absolute
+					&& fileName.lastIndexOf('/') > -1)
+			{// If we are not using absolute for thumbnail but we use it for video, that mean we have a path to parse
+				fileName = fileName.substring(fileName.lastIndexOf('/') + 1);
+			}
+			//Add -thumbnail. That's the path used by cocos2dx
+			thumbName = fileName + "-thumbnail";
+		}
+
+		String thumbPath = FileUtility.getFullPath(thumbName, thumbnailLocation);;
+		String thumbFullPath = FileUtility.getFullPath(thumbName + ".png", thumbnailLocation);
 		//Don't redo it if it already exists
-		if(thumbImageFile.exists())
+		if(new File(thumbFullPath).exists())
 		{
-			Log.d(TAG, "Video thumbnail already created at path: " + fullThumbPath);
+			Log.d(TAG, "Video thumbnail already created at path: " + thumbName);
 			return thumbPath;
 		}
 		try {
-			Log.d(TAG, "saving video thumbnail at path: " + fullThumbPath + ", video path: " + videoFile.getAbsolutePath());
+			Log.d(TAG, "saving video thumbnail at path: " + thumbName + ", video path: " + videoFile.getAbsolutePath());
 			//Save the thumbnail in a PNG compressed format, and close everything. If something fails, return null
-			FileOutputStream streamThumbnail = new FileOutputStream(fullThumbPath);
+			FileOutputStream streamThumbnail = new FileOutputStream(thumbFullPath);
 
-			//Other method to get a thumbnail. The problem is that it doesn't allow to get at a specific time 
-			Bitmap thumb; //= ThumbnailUtils.createVideoThumbnail(videoFile.getAbsolutePath(),MediaStore.Images.Thumbnails.MINI_KIND);
+			Bitmap thumb = null;
 			MediaMetadataRetriever retriever = new MediaMetadataRetriever();
 			try {
 				Uri appUri = NativeUtility.getMainActivity().getUriFromFileName(path);
@@ -585,19 +630,25 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 					retriever.setDataSource(videoFile.getAbsolutePath());
 				}
 		        int timeInSeconds = 1;
-		        thumb = retriever.getFrameAtTime(timeInSeconds * 1000000,
-		                    MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
-                if(thumb != null) {
-                    thumb.compress(CompressFormat.PNG, 80, streamThumbnail);
-                    thumb.recycle(); //ensure the image is freed;
-                }
-                else {
-                    thumbPath = null;
-                }
-		    } catch (Exception ex) {
-		        Log.i(TAG, "MediaMetadataRetriever in getThumbnail got exception:" + ex);
-		        thumbPath = null;
-		    }
+				thumb = retriever.getFrameAtTime(timeInSeconds * 1000000,
+				MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+				if(thumb == null)
+				{
+					// Since the first method dind't work, let's try an other one
+					// The problem is that it doesn't allow to get at a specific time
+					thumb = ThumbnailUtils.createVideoThumbnail(videoFile.getAbsolutePath(), MediaStore.Images.Thumbnails.MINI_KIND);
+				}
+				if(thumb != null) {
+					thumb.compress(CompressFormat.PNG, 80, streamThumbnail);
+					thumb.recycle(); //ensure the image is freed;
+				}
+				else {
+					thumbPath = null;
+				}
+			} catch (Exception ex) {
+				Log.i(TAG, "MediaMetadataRetriever in getThumbnail got exception:" + ex);
+				thumbPath = null;
+			}
 			retriever.release();
 			streamThumbnail.close();
 			Log.d(TAG, "thumbnail saved successfully");
@@ -613,10 +664,10 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 		return thumbPath;
 	}
 
-	public static float[] getVideoSize(String path)
+	public static float[] getVideoSize(String path, int location)
 	{
 		MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-		File videoFile = getFile(path);
+		File videoFile = getFile(path, FileUtility.FileLocation.valueOf(location));
 		float[] size = new float[2];
 		size[0] = 0;
 		size[1] = 0;
@@ -637,77 +688,115 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 		retriever.release();
 		return size;
 	}
-
-	public static boolean isValidVideo(String path)
-	{
-		int dotIndex = path.lastIndexOf(".");
-		if (dotIndex != -1) {
-			String fileExt = path.substring(dotIndex);
-			return videoExists(path) && org.videolan.libvlc.util.Extensions.VIDEO.contains(fileExt);
-		}
-		return false;
-	}
 	
 	public static boolean videoExists(String path)
 	{
-		File videoFile = getFile(path);
-		return videoFile != null && videoFile.exists() && videoFile.canRead();
-	}
-	
-	public static File getFile(String path)
-	{
-		Uri localURI = NativeUtility.getMainActivity().getUriFromFileName(path);
-		File localFile = null;
-		final String[] storageDict = VideoPicker.getStorageDirectories();
-		//First check the most common path, then check all storage directories
-		boolean startWithStorageDict = path.startsWith(Environment.getExternalStorageDirectory().toString());
-		for(int i = 0; i < storageDict.length && !startWithStorageDict; i++)
-		{
-			if(path.startsWith(storageDict[i]))
-			{
-				startWithStorageDict = true;
-			}
-		}
-		if(localURI != null) 
-		{
-			localFile = new File(localURI.getPath());
-		}
-		else if(path.startsWith(NativeUtility.getLocalPath()) 
-				|| startWithStorageDict)
-		{
-			localFile = new File(path);
-		}
-		else
-		{
-			ContentResolver cr = NativeUtility.getMainActivity().getContentResolver();
-			String[] projection = {MediaStore.MediaColumns.DATA};
-			Cursor cur = cr.query(Uri.parse(path), projection, null, null, null);
-			if(cur != null && cur.moveToFirst())
-			{
-			   String filePath = cur.getString(0);
-			   cur.close();
-			   localFile = new File(filePath);
-			   if(localFile.exists()){
-				   localFile.setReadable(true, false);
-				   Log.i(TAG, "File found, path : " + filePath);
-				   if(!localFile.canRead())
-				   {
-					   Log.e(TAG, "Error, cannot read file");
-					   return null;
-				   }
-			   } else {
-				   Log.e(TAG, "File not found for path : " + filePath);
-				   return null;
-			   }
-			} else {
-				   Log.e(TAG, "Invalid URI or other problem with path : " + path);
-				   return null;
-			}
-		}
-		return localFile;
+        int dotIndex = path.lastIndexOf(".");
+        if (dotIndex != -1) {
+            String fileExt = path.substring(dotIndex);
+            File videoFile = getFile(path, FileUtility.FileLocation.Unknown);
+            return org.videolan.libvlc.util.Extensions.VIDEO.contains(fileExt)
+                    && videoFile != null
+                    && videoFile.exists()
+                    && videoFile.canRead();
+        }
+        return false;
 	}
 
-	public void setSurfaceSize(final int width, final int height, final int visible_width, final int visible_height, int sar_num, int sar_den) {
+	// location support Unknown which trigger legacy case
+	private static File getFile(String path, FileUtility.FileLocation location) {
+        File foundFile = null;
+        if(location != FileUtility.FileLocation.Unknown) {
+            switch (location)
+            {
+                case Resources:
+                    // Search first in expansion
+                    Uri expansionUri = NativeUtility.getMainActivity().getUriFromFileName(path);
+                    if(expansionUri != null) {
+                        foundFile = new File(expansionUri.getPath());
+                    }
+                    // Search inside the assets if it's not in the expansion
+                    if(foundFile == null || !foundFile.exists() || !foundFile.canRead()) {
+                        // TODO: code copy/pasted from below, refactor me
+                        ContentResolver cr = NativeUtility.getMainActivity().getContentResolver();
+                        String[] projection = {MediaStore.MediaColumns.DATA};
+                        Cursor cur = cr.query(Uri.parse(path), projection, null, null, null);
+                        if (cur != null && cur.moveToFirst()) {
+                            String filePath = cur.getString(0);
+                            cur.close();
+                            foundFile = new File(filePath);
+                            if (foundFile.exists()) {
+                                foundFile.setReadable(true, false);
+                                Log.i(TAG, "File found, path : " + filePath);
+                                if (!foundFile.canRead()) {
+                                    Log.e(TAG, "Error, cannot read file");
+                                    return null;
+                                }
+                            } else {
+                                Log.e(TAG, "File not found for path : " + filePath);
+                                return null;
+                            }
+                        } else {
+                            Log.e(TAG, "Invalid URI or other problem with path : " + path);
+                            return null;
+                        }
+                    }
+                    break;
+                default:
+                    String fullPath = FileUtility.getFullPath(path, location);
+                    foundFile = new File(fullPath);
+                    if(!foundFile.exists() || !foundFile.canRead())  {
+                        return null;
+                    }
+                    break;
+            }
+        }
+        else {
+            // Legacy case, left untouched for now for compatibility
+            // TODO: refactor me
+            Uri localURI = NativeUtility.getMainActivity().getUriFromFileName(path);
+            final String[] storageDict = VideoPicker.getStorageDirectories();
+            //First check the most common path, then check all storage directories
+            boolean startWithStorageDict = path.startsWith(Environment.getExternalStorageDirectory().toString());
+            for (int i = 0; i < storageDict.length && !startWithStorageDict; i++) {
+                if (path.startsWith(storageDict[i])) {
+                    startWithStorageDict = true;
+                }
+            }
+            if (localURI != null) {
+                foundFile = new File(localURI.getPath());
+            } else if (path.startsWith(FileUtility.getLocalPath())
+                    || startWithStorageDict) {
+                foundFile = new File(path);
+            } else {
+                ContentResolver cr = NativeUtility.getMainActivity().getContentResolver();
+                String[] projection = {MediaStore.MediaColumns.DATA};
+                Cursor cur = cr.query(Uri.parse(path), projection, null, null, null);
+                if (cur != null && cur.moveToFirst()) {
+                    String filePath = cur.getString(0);
+                    cur.close();
+                    foundFile = new File(filePath);
+                    if (foundFile.exists()) {
+                        foundFile.setReadable(true, false);
+                        Log.i(TAG, "File found, path : " + filePath);
+                        if (!foundFile.canRead()) {
+                            Log.e(TAG, "Error, cannot read file");
+                            return null;
+                        }
+                    } else {
+                        Log.e(TAG, "File not found for path : " + filePath);
+                        return null;
+                    }
+                } else {
+                    Log.e(TAG, "Invalid URI or other problem with path : " + path);
+                    return null;
+                }
+            }
+        }
+        return foundFile;
+    }
+
+	private void setSurfaceSize(final int width, final int height) {
 		if (width * height == 0)
 			return;
 		currentVideoWidth = width;
@@ -766,7 +855,7 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 				e.printStackTrace();
 			}
 		}
-		setSurfaceSize(width, height, visibleWidth, visibleHeight, sarNum, sarDen);
+		setSurfaceSize(width, height);
 	}
 
 	@Override
@@ -780,13 +869,13 @@ public class VideoPlayer implements IVLCVout.Callback, LibVLC.HardwareAccelerati
 
 	@Override
 	public void run() {
-		this.play();
+		play();
 	}
 
 	private static class MyPlayerListener implements org.videolan.libvlc.MediaPlayer.EventListener {
 		private WeakReference<VideoPlayer> mOwner;
 
-		public MyPlayerListener(VideoPlayer owner) {
+		MyPlayerListener(VideoPlayer owner) {
 			mOwner = new WeakReference<VideoPlayer>(owner);
 		}
 

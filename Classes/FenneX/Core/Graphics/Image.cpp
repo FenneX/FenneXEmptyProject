@@ -234,7 +234,7 @@ void Image::loadAnimation(const char* filename, int capacity, bool useLastFrame)
     {
         std::ostringstream spriteFileName;
         spriteFileName << filename << '_' << std::setw(2) << std::setfill('0') << i << ".png";
-        spritesName.push_back(filename);
+        spritesName.push_back(spriteFileName.str());
     }
     SpriteFrame* firstFrame = SpriteFrameCache::getInstance()->getSpriteFrameByName(spritesName.at(!useLastFrame ? 0 : spritesName.size() - 1));
     Node* parent = delegate->getParent();
@@ -350,8 +350,8 @@ bool Image::collision(Vec2 point)
 {
     if(spriteSheet != NULL)
     {
-        point.x = (point.x - delegate->getPosition().x + delegate->getAnchorPoint().x * delegate->getContentSize().width) / delegate->getScale();
-        point.y = (point.y - delegate->getPosition().y + delegate->getAnchorPoint().y * delegate->getContentSize().height) / delegate->getScale();
+        point.x = (point.x - delegate->getPosition().x + delegate->getAnchorPoint().x * delegate->getContentSize().width) / delegate->getScaleX();
+        point.y = (point.y - delegate->getPosition().y + delegate->getAnchorPoint().y * delegate->getContentSize().height) / delegate->getScaleY();
     }
     return RawObject::collision(point);
 }
@@ -399,9 +399,10 @@ bool Image::generateScaledImage(std::string fileToScale, std::string fileToSave,
                               [fileToScale, fileToSave, extension] (RenderTexture* texture, const std::string& filename){
                                   //DO NOT USE FILENAME. It is corrupted on iOS. Use lambda capture instead.
                                   Director::getInstance()->getTextureCache()->removeTextureForKey(fileToSave + extension);
-                                  Director::getInstance()->getEventDispatcher()->dispatchCustomEvent("ImageScaled", DcreateP(Screate(fileToScale), Screate("Original"), Screate(fileToSave), Screate("Name"), NULL));
+                                  Value toSend = Value(ValueMap({{"Original", Value(fileToScale)}, {"Name", Value(fileToSave)}}));
+                                  Director::getInstance()->getEventDispatcher()->dispatchCustomEvent("ImageScaled", &toSend);
                               });
-    }, NULL, 0.01);
+    }, Value(), 0.01);
     return true;
 }
 NS_FENNEX_END

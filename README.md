@@ -47,7 +47,7 @@ Building for Android
 Support
 --
 Building tested on Mac OS X 10.8 and 10.9 with Xcode 5.1 and NDK r9d
-Runtime iOS 5.0+ and Android 2.3.3+
+Runtime iOS 5.0+ and Android 4.4+
 
 Additional features of FenneXEmptyProject
 --
